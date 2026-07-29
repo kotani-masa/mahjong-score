@@ -1,0 +1,1808 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雀卓成績帳 | 麻雀リーグ成績</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --felt-deep: #123a2c;
+      --felt-deep2: #0c2820;
+      --felt-line: rgba(241, 232, 214, 0.12);
+      --ivory: #f2e9d7;
+      --ivory-soft: #e9dcbf;
+      --ink: #241d15;
+      --ink-soft: #6b6047;
+      --gold: #c9a227;
+      --gold-soft: #e8cd6d;
+      --red: #b23a32;
+      --red-soft: #d97a6f;
+      --green-tile: #2f6b52;
+      --ok: #7fd8ac;
+      --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, rgba(200, 166, 60, 0.10), transparent 60%),
+        repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 26px),
+        linear-gradient(180deg, var(--felt-deep) 0%, var(--felt-deep2) 100%);
+      color: var(--ivory);
+      font-family: 'Zen Kaku Gothic New', sans-serif;
+      font-feature-settings: "palt";
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: 1040px;
+      margin: 0 auto;
+      padding: 0 20px 80px;
+    }
+
+    button {
+      font-family: inherit;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+      padding: 56px 20px 32px;
+      text-align: center;
+      position: relative;
+    }
+
+    .eyebrow {
+      font-size: 12px;
+      letter-spacing: .35em;
+      color: var(--gold-soft);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      font-size: clamp(32px, 6vw, 52px);
+      margin: 0 0 10px;
+      letter-spacing: .06em;
+      color: var(--ivory);
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+    }
+
+    h1 span {
+      color: var(--gold-soft);
+    }
+
+    .lede {
+      color: var(--ivory-soft);
+      font-size: 14px;
+      opacity: .8;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.9;
+    }
+
+    .tile-rule {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin: 26px auto 0;
+    }
+
+    .tile-rule .dot {
+      width: 6px;
+      height: 6px;
+      background: var(--gold);
+      border-radius: 1px;
+      transform: rotate(45deg);
+      opacity: .7;
+    }
+
+    .tile-rule .bar {
+      width: 60px;
+      height: 1px;
+      background: var(--felt-line);
+    }
+
+    .header-actions {
+      display: flex;
+      justify-content: center;
+      margin-top: 22px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--gold);
+      color: #2b2103;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      cursor: pointer;
+      text-decoration: none;
+      transition: transform .12s, box-shadow .12s;
+      box-shadow: 0 10px 24px -12px rgba(201, 162, 39, 0.6);
+    }
+
+    .btn:hover {
+      transform: translateY(-1px);
+    }
+
+    .btn.ghost {
+      background: transparent;
+      color: var(--gold-soft);
+      border: 1px solid var(--felt-line);
+      box-shadow: none;
+    }
+
+    .btn.danger {
+      background: var(--red);
+      color: #fff;
+      box-shadow: 0 10px 24px -12px rgba(178, 58, 50, 0.6);
+    }
+
+    .btn.small {
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+
+    /* ---------- Section shell ---------- */
+    section {
+      margin-top: 64px;
+    }
+
+    .sec-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--felt-line);
+      padding-bottom: 12px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .sec-head h2 {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 22px;
+      margin: 0;
+      letter-spacing: .05em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .sec-head h2::before {
+      content: "";
+      width: 10px;
+      height: 10px;
+      background: var(--gold);
+      display: inline-block;
+      transform: rotate(45deg);
+      border-radius: 2px;
+    }
+
+    .sec-note {
+      font-size: 12px;
+      color: var(--ivory-soft);
+      opacity: .65;
+    }
+
+    /* ---------- Rank strip (全員表示) ---------- */
+    .rank-strip {
+      display: flex;
+      align-items: stretch;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .rank-tile {
+      background: linear-gradient(180deg, var(--ivory) 0%, var(--ivory-soft) 100%);
+      border-radius: 10px 10px 6px 6px;
+      color: var(--ink);
+      width: 148px;
+      padding: 18px 12px 16px;
+      box-shadow: var(--shadow), inset 0 2px 0 rgba(255, 255, 255, 0.6), inset 0 -6px 0 rgba(0, 0, 0, 0.06);
+      position: relative;
+      text-align: center;
+      opacity: 0;
+      animation: rise .6s cubic-bezier(.2, .9, .25, 1) forwards;
+    }
+
+    .rank-tile::after {
+      content: "";
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 6px;
+      height: 3px;
+      background: var(--green-tile);
+      border-radius: 2px;
+      opacity: .5;
+    }
+
+    .rank-tile.unranked {
+      opacity: .55 !important;
+      animation: none;
+      box-shadow: none;
+      background: rgba(241, 232, 214, 0.5);
+    }
+
+    .rt-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      font-size: 15px;
+      background: var(--felt-line);
+      color: var(--ink-soft);
+    }
+
+    .rt-badge.r1 {
+      background: var(--gold);
+      color: #2b2103;
+    }
+
+    .rt-badge.r2 {
+      background: #cfd6d1;
+      color: #26332c;
+    }
+
+    .rt-badge.r3 {
+      background: #8a6a3a;
+      color: #fff1d6;
+    }
+
+    .rt-name {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 700;
+      font-size: 16px;
+      margin: 10px 0 2px;
+      letter-spacing: .03em;
+    }
+
+    .rt-total {
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      font-size: 18px;
+      margin-top: 2px;
+    }
+
+    .rt-sub {
+      font-size: 10.5px;
+      color: var(--ink-soft);
+      margin-top: 4px;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ---------- Ranking table ---------- */
+    .table-card {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 14px;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+    }
+
+    thead th {
+      text-align: right;
+      font-weight: 500;
+      color: var(--gold-soft);
+      padding: 14px 16px;
+      font-size: 11.5px;
+      letter-spacing: .08em;
+      border-bottom: 1px solid var(--felt-line);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    thead th:first-child,
+    thead th:nth-child(2) {
+      text-align: left;
+    }
+
+    thead th:hover {
+      color: var(--gold);
+    }
+
+    thead th .arrow {
+      opacity: .4;
+      font-size: 9px;
+      margin-left: 3px;
+    }
+
+    tbody td {
+      padding: 14px 16px;
+      text-align: right;
+      border-bottom: 1px solid var(--felt-line);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    tbody td:first-child,
+    tbody td:nth-child(2) {
+      text-align: left;
+    }
+
+    tbody tr:hover {
+      background: rgba(241, 232, 214, 0.05);
+    }
+
+    .rk {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 700;
+      font-size: 13px;
+      background: var(--felt-line);
+      color: var(--ivory-soft);
+    }
+
+    .rk.r1 {
+      background: var(--gold);
+      color: #2b2103;
+    }
+
+    .rk.r2 {
+      background: #cfd6d1;
+      color: #26332c;
+    }
+
+    .rk.r3 {
+      background: #8a6a3a;
+      color: #fff1d6;
+    }
+
+    .pname {
+      font-weight: 700;
+      letter-spacing: .03em;
+    }
+
+    .num.plus {
+      color: var(--ok);
+    }
+
+    .num.minus {
+      color: var(--red-soft);
+    }
+
+    .pill-row {
+      display: inline-flex;
+      gap: 4px;
+    }
+
+    .pip {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 700;
+      color: #2b2103;
+    }
+
+    .pip.p1 {
+      background: var(--gold);
+    }
+
+    .pip.p2 {
+      background: #cfd6d1;
+      color: #26332c;
+    }
+
+    .pip.p3 {
+      background: #8a6a3a;
+      color: #fff1d6;
+    }
+
+    .pip.p4 {
+      background: rgba(178, 58, 50, 0.6);
+      color: #fff;
+    }
+
+    .muted {
+      color: var(--ivory-soft);
+      opacity: .55;
+      font-size: 12px;
+    }
+
+    /* ---------- Session cards ---------- */
+    .sessions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width:760px) {
+      .sessions {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .session-card {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 14px;
+      padding: 20px 20px 8px;
+    }
+
+    .session-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 14px;
+    }
+
+    .session-date {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--gold-soft);
+    }
+
+    .session-head .muted {
+      font-size: 11px;
+    }
+
+    .mini-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+    }
+
+    .mini-table th {
+      text-align: right;
+      font-weight: 500;
+      color: var(--ivory-soft);
+      font-size: 10.5px;
+      opacity: .6;
+      padding: 6px 6px;
+      letter-spacing: .05em;
+    }
+
+    .mini-table th:first-child {
+      text-align: left;
+    }
+
+    .mini-table td {
+      padding: 8px 6px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      border-top: 1px solid var(--felt-line);
+    }
+
+    .mini-table td:first-child {
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .round-cell {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      line-height: 1.3;
+    }
+
+    .round-cell .rk-tag {
+      font-size: 9px;
+      opacity: .6;
+    }
+
+    /* ---------- Name links ---------- */
+    a.name-link {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px dashed transparent;
+      transition: color .15s, border-color .15s;
+    }
+
+    a.name-link:hover {
+      color: var(--gold-soft);
+      border-bottom-color: var(--gold-soft);
+    }
+
+    /* ---------- Player page ---------- */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--gold-soft);
+      text-decoration: none;
+      font-size: 13px;
+      letter-spacing: .03em;
+      margin-bottom: 28px;
+      opacity: .85;
+    }
+
+    .back-link:hover {
+      opacity: 1;
+    }
+
+    .player-hero {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 14px;
+      padding: 26px 28px;
+      flex-wrap: wrap;
+    }
+
+    .player-hero .rank-badge {
+      width: 64px;
+      height: 64px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, var(--ivory) 0%, var(--ivory-soft) 100%);
+      color: var(--ink);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      font-size: 26px;
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+
+    .player-hero-body {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .player-hero-name {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 800;
+      font-size: clamp(24px, 4vw, 32px);
+      letter-spacing: .05em;
+    }
+
+    .player-hero-sub {
+      font-size: 12px;
+      color: var(--ivory-soft);
+      opacity: .65;
+      margin-top: 4px;
+    }
+
+    .player-hero-total {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .player-hero-total .big {
+      font-weight: 900;
+      font-size: 30px;
+    }
+
+    .player-hero-total .lbl {
+      font-size: 11px;
+      color: var(--ivory-soft);
+      opacity: .6;
+      letter-spacing: .08em;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 14px;
+      margin-top: 26px;
+    }
+
+    .stat-card {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 10px;
+      padding: 16px 16px 14px;
+    }
+
+    .stat-card .lbl {
+      font-size: 11px;
+      color: var(--gold-soft);
+      letter-spacing: .06em;
+      opacity: .85;
+    }
+
+    .stat-card .val {
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+      font-size: 20px;
+      margin-top: 6px;
+    }
+
+    .panel-title {
+      font-family: 'Shippori Mincho', serif;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      margin: 40px 0 16px;
+      color: var(--gold-soft);
+    }
+
+    .dist-rows {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dist-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12.5px;
+    }
+
+    .dist-row .dist-lbl {
+      width: 38px;
+      flex-shrink: 0;
+      color: var(--ivory-soft);
+      opacity: .75;
+    }
+
+    .dist-track {
+      flex: 1;
+      height: 10px;
+      background: rgba(241, 232, 214, 0.08);
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .dist-bar {
+      height: 100%;
+      border-radius: 5px;
+    }
+
+    .dist-bar.d1 {
+      background: var(--gold);
+    }
+
+    .dist-bar.d2 {
+      background: #cfd6d1;
+    }
+
+    .dist-bar.d3 {
+      background: #8a6a3a;
+    }
+
+    .dist-bar.d4 {
+      background: var(--red-soft);
+    }
+
+    .dist-count {
+      width: 42px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      opacity: .8;
+    }
+
+    .trend-wrap {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 10px;
+      padding: 18px 18px 8px;
+    }
+
+    .trend-wrap svg {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    .empty-state {
+      color: var(--ivory-soft);
+      opacity: .55;
+      font-size: 13px;
+      padding: 30px 0;
+      text-align: center;
+    }
+
+    /* ---------- Update page ---------- */
+    .update-card {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 14px;
+      padding: 26px 26px 24px;
+    }
+
+    .field-group {
+      margin-bottom: 22px;
+    }
+
+    .field-label {
+      display: block;
+      font-size: 12px;
+      color: var(--gold-soft);
+      letter-spacing: .06em;
+      margin-bottom: 10px;
+    }
+
+    input[type="date"],
+    input[type="text"],
+    input[type="number"] {
+      background: rgba(241, 232, 214, 0.9);
+      border: 1px solid var(--felt-line);
+      color: var(--ink);
+      border-radius: 6px;
+      padding: 8px 10px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="date"] {
+      min-width: 160px;
+    }
+
+    .chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--felt-line);
+      background: rgba(241, 232, 214, 0.04);
+      color: var(--ivory-soft);
+      font-size: 13px;
+      cursor: pointer;
+      user-select: none;
+      transition: all .12s;
+    }
+
+    .chip.selected {
+      background: var(--gold);
+      border-color: var(--gold);
+      color: #2b2103;
+      font-weight: 700;
+    }
+
+    .add-player-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .add-player-row input {
+      flex: 1;
+      min-width: 120px;
+    }
+
+    .round-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .round-block {
+      border: 1px solid var(--felt-line);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 12px;
+      background: rgba(241, 232, 214, 0.02);
+    }
+
+    .round-block-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+      font-size: 12.5px;
+      color: var(--gold-soft);
+    }
+
+    .round-inputs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .round-input-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--ivory-soft);
+    }
+
+    .round-input-item input {
+      width: 100px;
+    }
+
+    .round-checksum {
+      font-size: 11.5px;
+      margin-left: auto;
+      align-self: center;
+    }
+
+    .round-checksum.ok {
+      color: var(--ok);
+    }
+
+    .round-checksum.warn {
+      color: var(--red-soft);
+    }
+
+    .icon-btn {
+      background: none;
+      border: none;
+      color: var(--ivory-soft);
+      opacity: .6;
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 6px;
+    }
+
+    .icon-btn:hover {
+      opacity: 1;
+      color: var(--red-soft);
+    }
+
+    .summary-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin-top: 6px;
+    }
+
+    .summary-table th {
+      text-align: right;
+      font-size: 10.5px;
+      color: var(--ivory-soft);
+      opacity: .6;
+      padding: 6px;
+      letter-spacing: .05em;
+    }
+
+    .summary-table th:first-child {
+      text-align: left;
+    }
+
+    .summary-table td {
+      padding: 8px 6px;
+      text-align: right;
+      border-top: 1px solid var(--felt-line);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .summary-table td:first-child {
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .form-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 22px;
+      flex-wrap: wrap;
+    }
+
+    .status-msg {
+      font-size: 12.5px;
+    }
+
+    .status-msg.ok {
+      color: var(--ok);
+    }
+
+    .status-msg.err {
+      color: var(--red-soft);
+    }
+
+    .existing-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--felt-line);
+      font-size: 13px;
+    }
+
+    .existing-row:last-child {
+      border-bottom: none;
+    }
+
+    .existing-row .exr-date {
+      font-weight: 700;
+      font-family: 'Shippori Mincho', serif;
+    }
+
+    .existing-row .exr-meta {
+      color: var(--ivory-soft);
+      opacity: .6;
+      font-size: 11.5px;
+      margin-left: 10px;
+    }
+
+    .save-note {
+      font-size: 11px;
+      color: var(--ivory-soft);
+      opacity: .5;
+      margin-top: 10px;
+      line-height: 1.7;
+    }
+
+    /* ---------- Footer ---------- */
+    footer {
+      margin-top: 70px;
+      text-align: center;
+      font-size: 11.5px;
+      color: var(--ivory-soft);
+      opacity: .5;
+      letter-spacing: .05em;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .rank-tile {
+        animation: none;
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <header>
+      <div class="eyebrow">MAHJONG LEAGUE · フルコンプ麻雀グループ</div>
+      <h1>麻雀成績記録<span></span></h1>
+      <p class="lede">毎回の対局結果を持ち寄って、通算成績を積み上げていくための記録ページです。<br>リンクを知っている人だけが見られます。</p>
+      <div class="tile-rule">
+        <div class="bar"></div>
+        <div class="dot"></div>
+        <div class="bar"></div>
+      </div>
+      <div class="header-actions">
+        <a class="btn" href="#/update">＋ 対局結果を登録する</a>
+      </div>
+    </header>
+
+    <div id="view-home">
+
+      <section id="rank-section">
+        <div class="sec-head">
+          <h2>総合順位</h2>
+          <div class="sec-note" id="rank-note"></div>
+        </div>
+        <div class="rank-strip" id="rank-strip"></div>
+      </section>
+
+      <section id="ranking-section">
+        <div class="sec-head">
+          <h2>通算成績表</h2>
+          <div class="sec-note">列見出しをクリックで並び替え / 名前クリックで個人ページへ</div>
+        </div>
+        <div class="table-card">
+          <table id="ranking-table">
+            <thead>
+              <tr>
+                <th data-key="rank" data-type="num">順位<span class="arrow">▲▼</span></th>
+                <th data-key="name" data-type="str">名前</th>
+                <th data-key="total" data-type="num">通算得点<span class="arrow">▲▼</span></th>
+                <th data-key="games" data-type="num">対局数<span class="arrow">▲▼</span></th>
+                <th data-key="avg" data-type="num">平均得点<span class="arrow">▲▼</span></th>
+                <th data-key="topRate" data-type="num">トップ率<span class="arrow">▲▼</span></th>
+                <th data-key="top2Rate" data-type="num">連対率<span class="arrow">▲▼</span></th>
+                <th data-key="avoidLast" data-type="num">ラス回避率<span class="arrow">▲▼</span></th>
+                <th data-key="best" data-type="num">ベストスコア<span class="arrow">▲▼</span></th>
+                <th data-key="none" data-type="none">直近成績</th>
+              </tr>
+            </thead>
+            <tbody id="ranking-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sessions-section">
+        <div class="sec-head">
+          <h2>対局結果</h2>
+          <div class="sec-note">得点はウマ込みの得失点</div>
+        </div>
+        <div class="sessions" id="sessions"></div>
+      </section>
+
+    </div>
+
+    <div id="view-player" style="display:none"></div>
+    <div id="view-update" style="display:none"></div>
+
+    <footer id="footer-note">読み込み中…</footer>
+  </div>
+
+  <script>
+    /* ====== 初期データ（麻雀成績表.xlsx より・初回のみ使用）====== */
+    const DEFAULT_DATA = {
+      playerNames: ["大浦", "石川", "佐藤", "小谷", "宮崎"],
+      sessions: [
+        {
+          date: "2026-07-16",
+          label: "2026年7月16日",
+          results: {
+            "大浦": { rounds: [32.7, 5.6, -1, -24.2] },
+            "石川": { rounds: [-21.3, -12.5, -30.1, -18.2] },
+            "佐藤": { rounds: [6.9, 39.8, 37.9, -15.2] },
+            "小谷": { rounds: [-18.3, -32.9, -6.8, 57.6] },
+          }
+        },
+        {
+          date: "2026-07-28",
+          label: "2026年7月28日",
+          results: {
+            "大浦": { rounds: [36.3, 37.4, -5.9, 31.3] },
+            "石川": { rounds: [12.7, -9.8, 1.5, -30.1] },
+            "佐藤": { rounds: [-18.7, -17.7, -27.7, 6.4] },
+            "小谷": { rounds: [-30.3, -9.9, 32.1, -7.6] },
+          }
+        }
+      ]
+    };
+
+    /* ====== 保存（Claude Artifact のストレージ機能）====== */
+    const STORAGE_KEY = "mahjong-league-data-v1";
+    let appData = null;
+    let storageAvailable = true;
+
+    function dateLabel(dateStr) {
+      const [y, m, d] = dateStr.split("-");
+      return `${y}年${Number(m)}月${Number(d)}日`;
+    }
+
+    function normalizeSession(s) {
+      // rounds付きの参加者から順位を自動計算して保持する
+      const names = Object.keys(s.results);
+      const nRounds = Math.max(0, ...names.map(n => s.results[n].rounds.length));
+      const roundRanks = [];
+      for (let i = 0; i < nRounds; i++) {
+        const entries = names
+          .filter(n => s.results[n].rounds[i] !== undefined)
+          .map(n => ({ n, score: s.results[n].rounds[i] }))
+          .sort((a, b) => b.score - a.score);
+        const rankMap = {};
+        entries.forEach((e, idx) => { rankMap[e.n] = idx + 1; });
+        roundRanks.push(rankMap);
+      }
+      const totals = {};
+      names.forEach(n => { totals[n] = s.results[n].rounds.reduce((a, b) => a + b, 0); });
+      const sessionOrder = [...names].sort((a, b) => totals[b] - totals[a]);
+      const sessionRankMap = {};
+      sessionOrder.forEach((n, idx) => { sessionRankMap[n] = idx + 1; });
+
+      const results = {};
+      names.forEach(n => {
+        results[n] = {
+          rank: sessionRankMap[n],
+          total: totals[n],
+          rounds: s.results[n].rounds.map((score, i) => [score, roundRanks[i][n]]),
+        };
+      });
+      return { date: s.date, label: s.label || dateLabel(s.date), rounds: nRounds, results };
+    }
+
+    async function loadData() {
+      try {
+        if (!window.storage) throw new Error("storage unavailable");
+        const res = await window.storage.get(STORAGE_KEY, true);
+        if (res && res.value) {
+          const parsed = JSON.parse(res.value);
+          appData = { playerNames: parsed.playerNames, sessions: parsed.sessions };
+          return;
+        }
+        throw new Error("no data yet");
+      } catch (e) {
+        storageAvailable = !!window.storage;
+        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+        if (storageAvailable) { await saveData(); }
+      }
+    }
+
+    async function saveData() {
+      if (!window.storage) { storageAvailable = false; return false; }
+      try {
+        const raw = { playerNames: appData.playerNames, sessions: appData.sessions };
+        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(raw), true);
+        storageAvailable = !!res;
+        return storageAvailable;
+      } catch (e) {
+        storageAvailable = false;
+        return false;
+      }
+    }
+
+    /* ====== 集計 ====== */
+    function buildStats() {
+      const stats = {};
+      appData.playerNames.forEach(name => {
+        stats[name] = { name, total: 0, games: 0, placements: [0, 0, 0, 0], scores: [], sessionRanks: [] };
+      });
+      const sessionsNorm = appData.sessions.map(normalizeSession).sort((a, b) => a.date.localeCompare(b.date));
+      sessionsNorm.forEach(s => {
+        Object.entries(s.results).forEach(([name, r]) => {
+          if (!stats[name]) { stats[name] = { name, total: 0, games: 0, placements: [0, 0, 0, 0], scores: [], sessionRanks: [] }; }
+          const st = stats[name];
+          st.sessionRanks.push({ date: s.date, rank: r.rank });
+          r.rounds.forEach(([score, rk]) => {
+            st.placements[rk - 1] += 1;
+            st.scores.push(score);
+            st.total += score;
+            st.games += 1;
+          });
+        });
+      });
+      Object.values(stats).forEach(st => {
+        const n = st.games;
+        st.avg = n ? st.total / n : null;
+        st.topRate = n ? st.placements[0] / n : null;
+        st.top2Rate = n ? (st.placements[0] + st.placements[1]) / n : null;
+        st.avoidLast = n ? 1 - (st.placements[3] / n) : null;
+        st.best = st.scores.length ? Math.max(...st.scores) : null;
+      });
+      const ranked = Object.values(stats).filter(s => s.games > 0).sort((a, b) => b.total - a.total);
+      ranked.forEach((s, i) => { s.rank = i + 1; });
+      const unranked = Object.values(stats).filter(s => s.games === 0);
+      unranked.forEach(s => { s.rank = null; });
+      return { list: [...ranked, ...unranked], sessions: sessionsNorm };
+    }
+
+    const fmt1 = v => v === null || v === undefined || Number.isNaN(v) ? "―" : (v > 0 ? "+" : "") + v.toFixed(1);
+    const fmtPct = v => v === null || v === undefined ? "―" : (v * 100).toFixed(1) + "%";
+    const numClass = v => v === null || v === undefined ? "" : (v > 0 ? "num plus" : v < 0 ? "num minus" : "num");
+    const nameLink = name => `<a class="name-link" href="#/player/${encodeURIComponent(name)}">${name}</a>`;
+
+    /* ====== 総合順位（全員表示・成績順）====== */
+    function renderRankStrip() {
+      const el = document.getElementById('rank-strip');
+      const note = document.getElementById('rank-note');
+      const list = stats.list;
+      note.textContent = `全${stats.sessions.length}回 · ${list.filter(s => s.games > 0).length}名参加中`;
+      el.innerHTML = list.map(s => {
+        const isRanked = !!s.rank;
+        const cls = s.rank === 1 ? "r1" : s.rank === 2 ? "r2" : s.rank === 3 ? "r3" : "";
+        return `<div class="rank-tile ${isRanked ? '' : 'unranked'}">
+      <div class="rt-badge ${cls}">${isRanked ? s.rank : '―'}</div>
+      <div class="rt-name">${nameLink(s.name)}</div>
+      ${isRanked
+            ? `<div class="rt-total" style="color:${s.total >= 0 ? '#245b3f' : 'var(--red)'}">${fmt1(s.total)}</div>
+           <div class="rt-sub">${s.games}局 · 平均 ${fmt1(s.avg)}</div>`
+            : `<div class="rt-sub" style="margin-top:8px;">未参加</div>`}
+    </div>`;
+      }).join("");
+    }
+
+    function renderTable(sortKey = null, dir = 1) {
+      let rows = [...stats.list];
+      if (sortKey) {
+        rows.sort((a, b) => {
+          let av = a[sortKey], bv = b[sortKey];
+          if (typeof av === "string") return av.localeCompare(bv) * dir;
+          if (av === null) av = -Infinity;
+          if (bv === null) bv = -Infinity;
+          return (av - bv) * dir;
+        });
+      }
+      const body = document.getElementById('ranking-body');
+      body.innerHTML = rows.map(s => {
+        const rkClass = s.rank === 1 ? "r1" : s.rank === 2 ? "r2" : s.rank === 3 ? "r3" : "";
+        const rkLabel = s.rank ?? "―";
+        const pipsHTML = s.sessionRanks.map(r => `<span class="pip p${r.rank}">${r.rank}</span>`).join("");
+        return `<tr>
+      <td><span class="rk ${rkClass}">${rkLabel}</span></td>
+      <td class="pname">${nameLink(s.name)}</td>
+      <td class="${numClass(s.total)}">${fmt1(s.total)}</td>
+      <td>${s.games}</td>
+      <td class="${numClass(s.avg)}">${fmt1(s.avg)}</td>
+      <td>${fmtPct(s.topRate)}</td>
+      <td>${fmtPct(s.top2Rate)}</td>
+      <td>${fmtPct(s.avoidLast)}</td>
+      <td class="${numClass(s.best)}">${fmt1(s.best)}</td>
+      <td><span class="pill-row">${pipsHTML || '<span class="muted">未参加</span>'}</span></td>
+    </tr>`;
+      }).join("");
+    }
+
+    function renderSessions() {
+      const el = document.getElementById('sessions');
+      if (stats.sessions.length === 0) {
+        el.innerHTML = `<div class="empty-state">まだ対局が登録されていません。「対局結果を登録する」から追加できます。</div>`;
+        return;
+      }
+      el.innerHTML = [...stats.sessions].reverse().map(s => {
+        const rows = Object.entries(s.results)
+          .sort((a, b) => a[1].rank - b[1].rank)
+          .map(([name, r]) => {
+            const roundCells = r.rounds.map(([score, rk]) =>
+              `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`
+            ).join("");
+            const rkClass = r.rank === 1 ? "r1" : r.rank === 2 ? "r2" : r.rank === 3 ? "r3" : "";
+            return `<tr>
+          <td>${nameLink(name)}</td>
+          <td><span class="rk ${rkClass}" style="width:20px;height:20px;font-size:11px;">${r.rank}</span></td>
+          <td class="${numClass(r.total)}">${fmt1(r.total)}</td>
+          ${roundCells}
+        </tr>`;
+          }).join("");
+        const roundHeaders = Array.from({ length: s.rounds }, (_, i) => `<th>${i + 1}回戦</th>`).join("");
+        return `<div class="session-card">
+      <div class="session-head">
+        <div class="session-date">${s.label}</div>
+        <div class="muted">全${s.rounds}回戦</div>
+      </div>
+      <table class="mini-table">
+        <thead><tr><th>名前</th><th>着順</th><th>通算</th>${roundHeaders}</tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+      }).join("");
+    }
+
+    /* ====== 個人ページ ====== */
+    function buildTrend(name) {
+      const pts = [0];
+      stats.sessions.forEach(s => {
+        const r = s.results[name];
+        if (!r) return;
+        r.rounds.forEach(([score]) => { pts.push(pts[pts.length - 1] + score); });
+      });
+      return pts;
+    }
+
+    function renderTrendSVG(name) {
+      const pts = buildTrend(name);
+      if (pts.length <= 1) return `<div class="empty-state">対局データがありません</div>`;
+
+      // 1. キリの良い目盛りステップ幅を動的に決める（50刻み、20刻み、10刻みなど）
+      const realMin = Math.min(...pts, 0);
+      const realMax = Math.max(...pts, 0);
+      const diff = realMax - realMin;
+
+      let step = 50;
+      if (diff <= 60) step = 20;
+      else if (diff <= 120) step = 30;
+      else if (diff <= 200) step = 50;
+      else step = 100;
+
+      // 目盛りの最小値・最大値をキリの良い数値（stepの倍数）に丸める
+      const minVal = Math.floor(realMin / step) * step;
+      const maxVal = Math.ceil(realMax / step) * step;
+
+      // 2. 描画領域・パディングの設定
+      const W = 500, H = 220;
+      const padLeft = 55, padRight = 30, padTop = 30, padBottom = 35;
+
+      const range = (maxVal - minVal) || 1;
+      const xAt = i => padLeft + (i / (pts.length - 1)) * (W - padLeft - padRight);
+      const yAt = v => H - padBottom - ((v - minVal) / range) * (H - padTop - padBottom);
+
+      const zeroY = yAt(0);
+      const path = pts.map((v, i) => `${i === 0 ? 'M' : 'L'} ${xAt(i).toFixed(1)} ${yAt(v).toFixed(1)}`).join(' ');
+      const areaPath = `${path} L ${xAt(pts.length - 1).toFixed(1)} ${zeroY.toFixed(1)} L ${xAt(0).toFixed(1)} ${zeroY.toFixed(1)} Z`;
+
+      const last = pts[pts.length - 1];
+      const strokeColor = last >= 0 ? '#e8cd6d' : '#d97a6f';
+
+      // 3. Y軸（縦軸）のキリの良い目盛り配列を生成
+      const ticks = [];
+      for (let v = minVal; v <= maxVal; v += step) {
+        ticks.push(v);
+      }
+
+      return `<svg viewBox="0 0 ${W} ${H}" style="width:100%; height:auto; display:block;">
+    <!-- グリッド線とY軸のキリの良い目盛り数値 -->
+    ${ticks.map(val => {
+        const y = yAt(val).toFixed(1);
+        const isZero = val === 0;
+        return `
+        <line x1="${padLeft}" y1="${y}" x2="${W - padRight}" y2="${y}" 
+              stroke="${isZero ? 'rgba(241,232,214,0.4)' : 'rgba(241,232,214,0.08)'}" 
+              stroke-dasharray="${isZero ? 'none' : '3,3'}" 
+              stroke-width="${isZero ? '1.5' : '1'}"/>
+        <text x="${padLeft - 10}" y="${Number(y) + 4}" 
+              fill="${isZero ? 'var(--gold-soft)' : 'rgba(241,232,214,0.6)'}" 
+              font-size="11" text-anchor="end" font-weight="${isZero ? 'bold' : 'normal'}">
+          ${val > 0 ? '+' + val : val}
+        </text>
+      `;
+      }).join('')}
+
+    <!-- 面塗りつぶしと折れ線 -->
+    <path d="${areaPath}" fill="${strokeColor}" opacity="0.12" stroke="none"/>
+    <path d="${path}" fill="none" stroke="${strokeColor}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+
+    <!-- プロット点と重なりを防いだ数値表示 -->
+    ${pts.map((v, i) => {
+        const x = xAt(i);
+        const y = yAt(v);
+
+        // 前後の値と比較して、山なら上に、谷なら下にテキストを配置して重なりを防ぐ
+        const prev = pts[i - 1] ?? v;
+        const next = pts[i + 1] ?? v;
+        const isValley = v < prev && v <= next;
+
+        const textY = isValley ? y + 18 : y - 10;
+        const labelText = v > 0 ? '+' + v.toFixed(1) : v.toFixed(1);
+
+        return `
+        <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="${strokeColor}" stroke="var(--felt-deep)" stroke-width="1.5"/>
+        <text x="${x.toFixed(1)}" y="${textY.toFixed(1)}" 
+              fill="${v >= 0 ? '#7fd8ac' : '#d97a6f'}" 
+              font-size="10" font-weight="700" text-anchor="middle"
+              style="text-shadow: 0 1px 3px rgba(0,0,0,0.8);">
+          ${labelText}
+        </text>
+      `;
+      }).join('')}
+  </svg>`;
+    }
+
+    function renderPlayerPage(name) {
+      const st = stats.list.find(s => s.name === name);
+      const el = document.getElementById('view-player');
+      if (!st) {
+        el.innerHTML = `<a class="back-link" href="#/">← 総合成績に戻る</a><div class="empty-state">選手が見つかりませんでした</div>`;
+        return;
+      }
+      const distRows = ['1', '2', '3', '4'].map((d, i) => {
+        const count = st.placements[i];
+        const pct = st.games ? (count / st.games * 100) : 0;
+        return `<div class="dist-row">
+      <div class="dist-lbl">${d}着</div>
+      <div class="dist-track"><div class="dist-bar d${d}" style="width:${pct}%"></div></div>
+      <div class="dist-count">${count}回</div>
+    </div>`;
+      }).join('');
+
+      const historyRows = stats.sessions
+        .filter(s => s.results[name])
+        .map(s => {
+          const r = s.results[name];
+          const rc = r.rank === 1 ? "r1" : r.rank === 2 ? "r2" : r.rank === 3 ? "r3" : "";
+          const roundCells = r.rounds.map(([score, rk]) =>
+            `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`
+          ).join('');
+          return `<tr>
+        <td>${s.label}</td>
+        <td><span class="rk ${rc}" style="width:20px;height:20px;font-size:11px;">${r.rank}</span></td>
+        <td class="${numClass(r.total)}">${fmt1(r.total)}</td>
+        ${roundCells}
+      </tr>`;
+        }).join('');
+
+      const historyTable = st.games ? `<table class="mini-table">
+      <thead><tr><th>対局日</th><th>着順</th><th>通算</th><th>1回戦</th><th>2回戦</th><th>3回戦</th><th>4回戦</th></tr></thead>
+      <tbody>${historyRows}</tbody>
+    </table>` : `<div class="empty-state">まだ対局データがありません</div>`;
+
+      el.innerHTML = `
+    <a class="back-link" href="#/">← 総合成績に戻る</a>
+    <div class="player-hero">
+      <div class="rank-badge">${st.rank ?? '―'}</div>
+      <div class="player-hero-body">
+        <div class="player-hero-name">${st.name}</div>
+        <div class="player-hero-sub">${st.games ? `通算${st.rank}位 · 全${st.games}局` : '対局データなし'}</div>
+      </div>
+      <div class="player-hero-total">
+        <div class="lbl">通算得点</div>
+        <div class="big" style="color:${st.total >= 0 ? '#7fd8ac' : 'var(--red-soft)'}">${fmt1(st.total)}</div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">平均得点</div><div class="val ${numClass(st.avg)}">${fmt1(st.avg)}</div></div>
+      <div class="stat-card"><div class="lbl">トップ率</div><div class="val">${fmtPct(st.topRate)}</div></div>
+      <div class="stat-card"><div class="lbl">連対率</div><div class="val">${fmtPct(st.top2Rate)}</div></div>
+      <div class="stat-card"><div class="lbl">ラス回避率</div><div class="val">${fmtPct(st.avoidLast)}</div></div>
+      <div class="stat-card"><div class="lbl">ベストスコア</div><div class="val ${numClass(st.best)}">${fmt1(st.best)}</div></div>
+    </div>
+
+    <div class="panel-title">着順分布</div>
+    <div class="dist-rows">${st.games ? distRows : '<div class="empty-state">対局データがありません</div>'}</div>
+
+    <div class="panel-title">通算得点の推移</div>
+    <div class="trend-wrap">${renderTrendSVG(name)}</div>
+
+    <div class="panel-title">対局履歴</div>
+    <div class="table-card">${historyTable}</div>
+  `;
+    }
+
+    /* ====== 更新ページ（対局結果の登録）====== */
+    let draft = null;
+    let pendingStatus = null; // {ok:boolean, text:string} 保存直後の再描画をまたいで表示するため
+
+    function newDraft() {
+      return {
+        date: "",
+        participants: [], // 名前の配列（選んだ順）
+        rounds: [{}],    // [{name:score}, ...]
+        editingDate: null, // 既存の対局を編集中ならその date
+      };
+    }
+
+    function draftChecksum(roundIdx) {
+      const round = draft.rounds[roundIdx];
+      const sum = draft.participants.reduce((acc, name) => {
+        const v = round[name];
+        return acc + (v === undefined || v === "" || Number.isNaN(Number(v)) ? 0 : Number(v));
+      }, 0);
+      return sum;
+    }
+
+    function renderUpdatePage() {
+      const el = document.getElementById('view-update');
+
+      const chips = appData.playerNames.map(name => {
+        const sel = draft.participants.includes(name);
+        return `<div class="chip ${sel ? 'selected' : ''}" data-name="${name}">${name}</div>`;
+      }).join('');
+
+      const roundsHTML = draft.rounds.map((round, ri) => {
+        if (draft.participants.length === 0) {
+          return `<div class="round-block"><div class="empty-state" style="padding:10px 0;">先に参加者を選んでください</div></div>`;
+        }
+        const sum = draftChecksum(ri);
+        const ok = Math.abs(sum) < 0.05;
+        const inputs = draft.participants.map(name => {
+          const val = round[name] !== undefined ? round[name] : "";
+          return `<div class="round-input-item">
+        <span>${name}</span>
+        <input type="number" step="0.1" inputmode="decimal" data-round="${ri}" data-name="${name}" class="score-input" value="${val}">
+      </div>`;
+        }).join('');
+        return `<div class="round-block">
+      <div class="round-block-head">
+        <span>${ri + 1}回戦</span>
+        <span class="round-checksum ${ok ? 'ok' : 'warn'}">合計 ${sum.toFixed(1)} ${ok ? '✓ ゼロサムOK' : '(通常は0になります)'}</span>
+        ${draft.rounds.length > 1 ? `<button type="button" class="icon-btn remove-round-btn" data-round="${ri}">✕</button>` : ''}
+      </div>
+      <div class="round-inputs">${inputs}</div>
+    </div>`;
+      }).join('');
+
+      // サマリー（保存前プレビュー）
+      let summaryHTML = '';
+      if (draft.participants.length > 0) {
+        const totals = draft.participants.map(name => {
+          const total = draft.rounds.reduce((a, r) => a + (Number(r[name]) || 0), 0);
+          return { name, total };
+        }).sort((a, b) => b.total - a.total);
+        summaryHTML = `<table class="summary-table">
+      <thead><tr><th>名前</th><th>着順</th><th>通算</th></tr></thead>
+      <tbody>${totals.map((t, i) => `<tr><td>${t.name}</td><td>${i + 1}</td><td class="${numClass(t.total)}">${fmt1(t.total)}</td></tr>`).join('')}</tbody>
+    </table>`;
+      }
+
+      const existingHTML = stats.sessions.length ? [...stats.sessions].reverse().map(s => {
+        return `<div class="existing-row">
+      <div><span class="exr-date">${s.label}</span><span class="exr-meta">${Object.keys(s.results).join(' / ')}</span></div>
+      <div style="display:flex; gap:8px;">
+        <button type="button" class="btn ghost small edit-session-btn" data-date="${s.date}">編集</button>
+        <button type="button" class="btn danger small delete-session-btn" data-date="${s.date}">削除</button>
+      </div>
+    </div>`;
+      }).join('') : `<div class="empty-state">まだ対局が登録されていません</div>`;
+
+      el.innerHTML = `
+    <a class="back-link" href="#/">← 総合成績に戻る</a>
+    <h2 class="panel-title" style="margin-top:0;">${draft.editingDate ? '対局結果を編集' : '対局結果を登録'}</h2>
+
+    <div class="update-card">
+      <div class="field-group">
+        <label class="field-label">対局日</label>
+        <input type="date" id="u-date" value="${draft.date}">
+      </div>
+
+      <div class="field-group">
+        <label class="field-label">参加者を選択</label>
+        <div class="chip-list" id="u-chips">${chips}</div>
+        <div class="add-player-row">
+          <input type="text" id="u-new-player" placeholder="新しいプレイヤー名を追加">
+          <button type="button" class="btn ghost small" id="u-add-player-btn">追加</button>
+        </div>
+      </div>
+
+      <div class="field-group">
+        <div class="round-header-row">
+          <label class="field-label" style="margin:0;">回戦ごとの得失点</label>
+          <button type="button" class="btn ghost small" id="u-add-round-btn">＋ 回戦を追加</button>
+        </div>
+        <div id="u-rounds">${roundsHTML}</div>
+      </div>
+
+      <div class="field-group" id="u-summary-wrap" style="${draft.participants.length ? '' : 'display:none'}">
+        <label class="field-label">保存後のこの対局の順位（プレビュー）</label>
+        ${summaryHTML}
+      </div>
+
+      <div class="form-actions">
+        <button type="button" class="btn" id="u-save-btn">この対局を保存</button>
+        ${draft.editingDate ? `<button type="button" class="btn ghost" id="u-cancel-edit-btn">編集をやめる</button>` : ''}
+        <span class="status-msg ${pendingStatus ? (pendingStatus.ok ? 'ok' : 'err') : ''}" id="u-status">${pendingStatus ? pendingStatus.text : ''}</span>
+      </div>
+      <div class="save-note">${storageAvailable
+          ? 'このページを開いている全員に共有されます。保存すると通算成績表にすぐ反映されます。'
+          : '※ この環境では自動保存が有効になっていないため、更新内容はページを閉じると失われます。'}</div>
+    </div>
+
+    <h2 class="panel-title">登録済みの対局</h2>
+    <div class="table-card">${existingHTML}</div>
+  `;
+
+      bindUpdateEvents();
+      pendingStatus = null;
+    }
+
+    function bindUpdateEvents() {
+      document.getElementById('u-date').addEventListener('change', e => {
+        draft.date = e.target.value;
+      });
+
+      document.querySelectorAll('#u-chips .chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const name = chip.dataset.name;
+          const idx = draft.participants.indexOf(name);
+          if (idx > -1) { draft.participants.splice(idx, 1); }
+          else { draft.participants.push(name); }
+          renderUpdatePage();
+        });
+      });
+
+      document.getElementById('u-add-player-btn').addEventListener('click', () => {
+        const input = document.getElementById('u-new-player');
+        const name = input.value.trim();
+        if (!name) return;
+        if (!appData.playerNames.includes(name)) appData.playerNames.push(name);
+        if (!draft.participants.includes(name)) draft.participants.push(name);
+        renderUpdatePage();
+      });
+
+      document.getElementById('u-add-round-btn').addEventListener('click', () => {
+        draft.rounds.push({});
+        renderUpdatePage();
+      });
+
+      document.querySelectorAll('.remove-round-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          draft.rounds.splice(Number(btn.dataset.round), 1);
+          renderUpdatePage();
+        });
+      });
+
+      document.querySelectorAll('.score-input').forEach(input => {
+        input.addEventListener('input', () => {
+          const ri = Number(input.dataset.round);
+          const name = input.dataset.name;
+          draft.rounds[ri][name] = input.value;
+          // チェックサムとサマリーだけ軽く更新（全体再描画はしない＝入力中のフォーカスを保つ）
+          updateChecksumAndSummaryOnly();
+        });
+      });
+
+      document.getElementById('u-save-btn').addEventListener('click', saveDraft);
+
+      const cancelBtn = document.getElementById('u-cancel-edit-btn');
+      if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+          draft = newDraft();
+          renderUpdatePage();
+        });
+      }
+
+      document.querySelectorAll('.delete-session-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const date = btn.dataset.date;
+          if (!confirm(`${dateLabel(date)}の対局結果を削除します。よろしいですか？`)) return;
+          appData.sessions = appData.sessions.filter(s => s.date !== date);
+          await saveData();
+          refreshAll();
+          renderUpdatePage();
+        });
+      });
+
+      document.querySelectorAll('.edit-session-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const date = btn.dataset.date;
+          const raw = appData.sessions.find(s => s.date === date);
+          if (!raw) return;
+          const names = Object.keys(raw.results);
+          const nRounds = Math.max(...names.map(n => raw.results[n].rounds.length));
+          const rounds = [];
+          for (let i = 0; i < nRounds; i++) {
+            const r = {};
+            names.forEach(n => { r[n] = raw.results[n].rounds[i]; });
+            rounds.push(r);
+          }
+          draft = { date, participants: names, rounds, editingDate: date };
+          renderUpdatePage();
+          window.scrollTo(0, 0);
+        });
+      });
+    }
+
+    function updateChecksumAndSummaryOnly() {
+      document.querySelectorAll('.round-block').forEach((block, ri) => {
+        const el = block.querySelector('.round-checksum');
+        if (!el) return;
+        const sum = draftChecksum(ri);
+        const ok = Math.abs(sum) < 0.05;
+        el.className = `round-checksum ${ok ? 'ok' : 'warn'}`;
+        el.textContent = `合計 ${sum.toFixed(1)} ${ok ? '✓ ゼロサムOK' : '(通常は0になります)'}`;
+      });
+      const wrap = document.getElementById('u-summary-wrap');
+      if (!wrap) return;
+      if (draft.participants.length > 0) {
+        wrap.style.display = '';
+        const totals = draft.participants.map(name => {
+          const total = draft.rounds.reduce((a, r) => a + (Number(r[name]) || 0), 0);
+          return { name, total };
+        }).sort((a, b) => b.total - a.total);
+        wrap.querySelector('.summary-table tbody').innerHTML = totals
+          .map((t, i) => `<tr><td>${t.name}</td><td>${i + 1}</td><td class="${numClass(t.total)}">${fmt1(t.total)}</td></tr>`)
+          .join('');
+      }
+    }
+
+    async function saveDraft() {
+      const statusEl = document.getElementById('u-status');
+      statusEl.className = 'status-msg';
+      statusEl.textContent = '';
+
+      if (!draft.date) { statusEl.className = 'status-msg err'; statusEl.textContent = '対局日を入力してください。'; return; }
+      if (draft.participants.length < 2) { statusEl.className = 'status-msg err'; statusEl.textContent = '参加者を2人以上選んでください。'; return; }
+      if (draft.rounds.length < 1) { statusEl.className = 'status-msg err'; statusEl.textContent = '回戦を1つ以上追加してください。'; return; }
+      for (const round of draft.rounds) {
+        for (const name of draft.participants) {
+          const v = round[name];
+          if (v === undefined || v === "" || Number.isNaN(Number(v))) {
+            statusEl.className = 'status-msg err';
+            statusEl.textContent = 'すべてのマスに得失点を入力してください。';
+            return;
+          }
+        }
+      }
+
+      const existingIdx = appData.sessions.findIndex(s => s.date === draft.date);
+      if (existingIdx > -1 && draft.date !== draft.editingDate) {
+        if (!confirm(`${dateLabel(draft.date)}にはすでに対局結果があります。上書きしますか？`)) return;
+      }
+
+      const results = {};
+      draft.participants.forEach(name => {
+        results[name] = { rounds: draft.rounds.map(r => Number(r[name])) };
+      });
+      const session = { date: draft.date, label: dateLabel(draft.date), results };
+
+      if (draft.editingDate && draft.editingDate !== draft.date) {
+        appData.sessions = appData.sessions.filter(s => s.date !== draft.editingDate);
+      }
+      const idx = appData.sessions.findIndex(s => s.date === draft.date);
+      if (idx > -1) { appData.sessions[idx] = session; }
+      else { appData.sessions.push(session); }
+
+      const saved = await saveData();
+      refreshAll();
+
+      pendingStatus = saved
+        ? { ok: true, text: '保存しました。' }
+        : { ok: false, text: '保存に失敗しました（この環境では自動保存が使えない可能性があります）。' };
+
+      draft = newDraft();
+      renderUpdatePage();
+    }
+
+    /* ====== ルーティング ====== */
+    function route() {
+      const hash = location.hash;
+      const playerMatch = hash.match(/^#\/player\/(.+)$/);
+      const home = document.getElementById('view-home');
+      const player = document.getElementById('view-player');
+      const update = document.getElementById('view-update');
+
+      home.style.display = 'none';
+      player.style.display = 'none';
+      update.style.display = 'none';
+
+      if (playerMatch) {
+        renderPlayerPage(decodeURIComponent(playerMatch[1]));
+        player.style.display = 'block';
+      } else if (hash === '#/update') {
+        if (!draft) draft = newDraft();
+        renderUpdatePage();
+        update.style.display = 'block';
+      } else {
+        home.style.display = '';
+      }
+      window.scrollTo(0, 0);
+    }
+    window.addEventListener('hashchange', route);
+
+    /* ====== 再描画まとめ ====== */
+    let stats = null;
+    function refreshAll() {
+      stats = buildStats();
+      renderRankStrip();
+      renderTable();
+      renderSessions();
+      document.getElementById('footer-note').textContent =
+        `${appData.playerNames.join(' · ')}　—　最終更新 ${stats.sessions.length ? stats.sessions[stats.sessions.length - 1].label : '―'}`;
+    }
+
+    let currentSort = { key: null, dir: 1 };
+    function bindSortHandlers() {
+      document.querySelectorAll('#ranking-table thead th').forEach(th => {
+        const key = th.dataset.key;
+        if (key === "none") return;
+        th.addEventListener('click', () => {
+          if (currentSort.key === key) { currentSort.dir *= -1; }
+          else { currentSort = { key, dir: key === 'name' ? 1 : -1 }; }
+          renderTable(currentSort.key, currentSort.dir);
+        });
+      });
+    }
+
+    /* ====== 起動 ====== */
+    (async function init() {
+      await loadData();
+      refreshAll();
+      bindSortHandlers();
+      route();
+    })();
+  </script>
+</body>
+
+</html>
