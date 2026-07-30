@@ -595,6 +595,9 @@
       box-shadow: var(--shadow);
       flex-shrink: 0;
     }
+    .player-hero .rank-badge.r1 { background: var(--gold); color: #2b2103; }
+    .player-hero .rank-badge.r2 { background: #cfd6d1; color: #26332c; }
+    .player-hero .rank-badge.r3 { background: #8a6a3a; color: #fff1d6; }
 
     .player-hero-body {
       flex: 1;
@@ -723,6 +726,62 @@
       text-align: right;
       font-variant-numeric: tabular-nums;
       opacity: .8;
+    }
+
+    .dist-flex {
+      display: flex;
+      align-items: center;
+      gap: 30px;
+      flex-wrap: wrap;
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 10px;
+      padding: 18px 20px;
+    }
+
+    .dist-flex .dist-rows {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .dist-donut {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .dist-legend {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      font-size: 10.5px;
+      color: var(--ivory-soft);
+      opacity: .85;
+    }
+
+    .dist-legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .dist-legend i {
+      width: 8px;
+      height: 8px;
+      border-radius: 2px;
+      display: inline-block;
+    }
+
+    .radar-wrap {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 10px;
+      padding: 18px;
+      display: flex;
+      justify-content: center;
     }
 
     .trend-wrap {
@@ -1001,9 +1060,8 @@
   <div class="wrap">
 
     <header>
-      <div class="eyebrow">MAHJONG LEAGUE · 麻雀グループ</div>
+      <div class="eyebrow">MAHJONG LEAGUE · フルコンプ麻雀グループ</div>
       <h1>麻雀成績記録<span></span></h1>
-      <p class="lede">毎回の対局結果を持ち寄って、通算成績を積み上げていくための記録ページです。<br>リンクを知っている人だけが見られます。</p>
       <div class="tile-rule">
         <div class="bar"></div>
         <div class="dot"></div>
@@ -1037,6 +1095,7 @@
                 <th data-key="name" data-type="str">名前</th>
                 <th data-key="total" data-type="num">通算得点<span class="arrow">▲▼</span></th>
                 <th data-key="games" data-type="num">対局数<span class="arrow">▲▼</span></th>
+                <th data-key="avgRank" data-type="num">順位率<span class="arrow">▲▼</span></th>
                 <th data-key="avg" data-type="num">平均得点<span class="arrow">▲▼</span></th>
                 <th data-key="topRate" data-type="num">トップ率<span class="arrow">▲▼</span></th>
                 <th data-key="top2Rate" data-type="num">連対率<span class="arrow">▲▼</span></th>
@@ -1094,14 +1153,39 @@
       ]
     };
 
-    /* ====== 保存（Claude Artifact のストレージ機能）====== */
-    const STORAGE_KEY = "mahjong-league-data-v1";
+    /* ====== 保存（Googleスプレッドシート + Apps Script API）======
+       セットアップ手順は別途お渡しした案内をご覧ください。
+       デプロイ後、下記 SHEET_API_URL に発行された /exec のURLを貼り付けてください。 */
+    const SHEET_API_URL = "https://script.google.com/macros/s/AKfycbzIv1ecDOaquIh93MiGLWzN2OUaqzTGBlxMA2B0ACryaGB1zH7eU0FM7jT4-eO2jB0Lqw/exec";
+    const API_CONFIGURED = /^https:\/\/script\.google\.com\/macros\//.test(SHEET_API_URL);
+
     let appData = null;
-    let storageAvailable = true;
+    let storageAvailable = false;
 
     function dateLabel(dateStr) {
       const [y, m, d] = dateStr.split("-");
       return `${y}年${Number(m)}月${Number(d)}日`;
+    }
+
+    async function apiCall(action, payload) {
+      if (!API_CONFIGURED) return { ok: false, error: "not configured" };
+      try {
+        const res = await fetch(SHEET_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" }, // プリフライトを避けるため text/plain で送信
+          body: JSON.stringify({ action, payload }),
+        });
+        return await res.json();
+      } catch (e) {
+        console.error("API呼び出しに失敗:", action, e);
+        return { ok: false, error: String(e) };
+      }
+    }
+
+    async function apiFetchAll() {
+      const res = await fetch(SHEET_API_URL + "?action=getAll", { method: "GET" });
+      if (!res.ok) throw new Error("getAll failed: " + res.status);
+      return await res.json();
     }
 
     function normalizeSession(s) {
@@ -1135,34 +1219,57 @@
       return { date: s.date, label: s.label || dateLabel(s.date), rounds: nRounds, results };
     }
 
-    async function loadData() {
-      try {
-        if (!window.storage) throw new Error("storage unavailable");
-        const res = await window.storage.get(STORAGE_KEY, true);
-        if (res && res.value) {
-          const parsed = JSON.parse(res.value);
-          appData = { playerNames: parsed.playerNames, sessions: parsed.sessions };
-          return;
-        }
-        throw new Error("no data yet");
-      } catch (e) {
-        storageAvailable = !!window.storage;
-        appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
-        if (storageAvailable) { await saveData(); }
+    async function seedInitialData() {
+      // スプレッドシートが空のときだけ、最初の対局データを一度だけ流し込む
+      for (const name of DEFAULT_DATA.playerNames) {
+        await apiCall("addPlayer", { name });
+      }
+      for (const s of DEFAULT_DATA.sessions) {
+        await apiCall("saveSession", { date: s.date, results: s.results });
       }
     }
 
-    async function saveData() {
-      if (!window.storage) { storageAvailable = false; return false; }
-      try {
-        const raw = { playerNames: appData.playerNames, sessions: appData.sessions };
-        const res = await window.storage.set(STORAGE_KEY, JSON.stringify(raw), true);
-        storageAvailable = !!res;
-        return storageAvailable;
-      } catch (e) {
-        storageAvailable = false;
-        return false;
+    async function loadData() {
+      if (API_CONFIGURED) {
+        try {
+          let data = await apiFetchAll();
+          if ((!data.playerNames || data.playerNames.length === 0) && (!data.sessions || data.sessions.length === 0)) {
+            await seedInitialData();
+            data = await apiFetchAll();
+          }
+          appData = {
+            playerNames: (data.playerNames && data.playerNames.length) ? data.playerNames : DEFAULT_DATA.playerNames,
+            sessions: data.sessions || [],
+          };
+          storageAvailable = true;
+          return;
+        } catch (e) {
+          console.error("スプレッドシートの読み込みに失敗しました。ローカルの初期データで表示します。", e);
+        }
       }
+      storageAvailable = false;
+      appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+    }
+
+    // 対局1件の保存（新規・上書き）。成功したかどうかを返す。
+    async function saveSessionToSheet(date, results) {
+      if (!API_CONFIGURED) { storageAvailable = false; return false; }
+      const res = await apiCall("saveSession", { date, results });
+      storageAvailable = !!(res && res.ok);
+      return storageAvailable;
+    }
+
+    async function deleteSessionFromSheet(date) {
+      if (!API_CONFIGURED) { storageAvailable = false; return false; }
+      const res = await apiCall("deleteSession", { date });
+      storageAvailable = !!(res && res.ok);
+      return storageAvailable;
+    }
+
+    async function addPlayerToSheet(name) {
+      if (!API_CONFIGURED) return false;
+      const res = await apiCall("addPlayer", { name });
+      return !!(res && res.ok);
     }
 
     /* ====== 集計 ====== */
@@ -1188,6 +1295,7 @@
       Object.values(stats).forEach(st => {
         const n = st.games;
         st.avg = n ? st.total / n : null;
+        st.avgRank = n ? (st.placements[0] * 1 + st.placements[1] * 2 + st.placements[2] * 3 + st.placements[3] * 4) / n : null;
         st.topRate = n ? st.placements[0] / n : null;
         st.top2Rate = n ? (st.placements[0] + st.placements[1]) / n : null;
         st.avoidLast = n ? 1 - (st.placements[3] / n) : null;
@@ -1197,10 +1305,24 @@
       ranked.forEach((s, i) => { s.rank = i + 1; });
       const unranked = Object.values(stats).filter(s => s.games === 0);
       unranked.forEach(s => { s.rank = null; });
-      return { list: [...ranked, ...unranked], sessions: sessionsNorm };
+      const rangeOf = key => {
+        const vals = ranked.map(s => s[key]).filter(v => v !== null && v !== undefined);
+        if (!vals.length) return { min: 0, max: 0 };
+        return { min: Math.min(...vals), max: Math.max(...vals) };
+      };
+      const ranges = {
+        avgRank: rangeOf('avgRank'),
+        avg: rangeOf('avg'),
+        topRate: rangeOf('topRate'),
+        top2Rate: rangeOf('top2Rate'),
+        avoidLast: rangeOf('avoidLast'),
+        best: rangeOf('best'),
+      };
+      return { list: [...ranked, ...unranked], sessions: sessionsNorm, ranges };
     }
 
     const fmt1 = v => v === null || v === undefined || Number.isNaN(v) ? "―" : (v > 0 ? "+" : "") + v.toFixed(1);
+    const fmtRank = v => v === null || v === undefined ? "―" : v.toFixed(2);
     const fmtPct = v => v === null || v === undefined ? "―" : (v * 100).toFixed(1) + "%";
     const numClass = v => v === null || v === undefined ? "" : (v > 0 ? "num plus" : v < 0 ? "num minus" : "num");
     const nameLink = name => `<a class="name-link" href="#/player/${encodeURIComponent(name)}">${name}</a>`;
@@ -1231,8 +1353,11 @@
         rows.sort((a, b) => {
           let av = a[sortKey], bv = b[sortKey];
           if (typeof av === "string") return av.localeCompare(bv) * dir;
-          if (av === null) av = -Infinity;
-          if (bv === null) bv = -Infinity;
+          const aNull = av === null || av === undefined;
+          const bNull = bv === null || bv === undefined;
+          if (aNull && bNull) return 0;
+          if (aNull) return 1;
+          if (bNull) return -1;
           return (av - bv) * dir;
         });
       }
@@ -1246,6 +1371,7 @@
       <td class="pname">${nameLink(s.name)}</td>
       <td class="${numClass(s.total)}">${fmt1(s.total)}</td>
       <td>${s.games}</td>
+      <td>${fmtRank(s.avgRank)}</td>
       <td class="${numClass(s.avg)}">${fmt1(s.avg)}</td>
       <td>${fmtPct(s.topRate)}</td>
       <td>${fmtPct(s.top2Rate)}</td>
@@ -1284,7 +1410,7 @@
         <div class="muted">全${s.rounds}回戦</div>
       </div>
       <table class="mini-table">
-        <thead><tr><th>名前</th><th>着順</th><th>通算</th>${roundHeaders}</tr></thead>
+        <thead><tr><th>名前</th><th>着順</th><th>合計</th>${roundHeaders}</tr></thead>
         <tbody>${rows}</tbody>
       </table>
     </div>`;
@@ -1390,7 +1516,88 @@
   </svg>`;
     }
 
-    function renderPlayerPage(name) {
+    function normAxis(value, key, invert) {
+  const r = stats.ranges[key];
+  if (!r || value === null || value === undefined) return 0;
+  const span = r.max - r.min;
+  if (span === 0) return 0.7;
+  let t = (value - r.min) / span;
+  if (invert) t = 1 - t;
+  return Math.max(0.03, Math.min(1, t));
+}
+
+function renderRadarSVG(st) {
+  if (!st.games) return `<div class="empty-state">対局データがありません</div>`;
+  const axes = [
+    { key: 'avgRank', label: '順位率', invert: true },
+    { key: 'avg', label: '平均得点', invert: false },
+    { key: 'topRate', label: 'トップ率', invert: false },
+    { key: 'top2Rate', label: '連対率', invert: false },
+    { key: 'avoidLast', label: 'ラス回避率', invert: false },
+    { key: 'best', label: 'ベストスコア', invert: false },
+  ];
+  const W = 280, H = 260, cx = 140, cy = 132, R = 90;
+  const angleFor = i => -Math.PI / 2 + i * (2 * Math.PI / axes.length);
+  const pointAt = (i, t) => {
+    const a = angleFor(i);
+    const r = 10 + t * (R - 10);
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+  };
+  const ringPolys = [0.25, 0.5, 0.75, 1].map(level => {
+    const pts = axes.map((_, i) => pointAt(i, level));
+    return `<polygon points="${pts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="rgba(241,232,214,0.12)" stroke-width="1"/>`;
+  }).join('');
+  const axisLines = axes.map((_, i) => {
+    const [x, y] = pointAt(i, 1);
+    return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="rgba(241,232,214,0.15)" stroke-width="1"/>`;
+  }).join('');
+  const labels = axes.map((ax, i) => {
+    const [x, y] = pointAt(i, 1.22);
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="11" fill="var(--gold-soft)">${ax.label}</text>`;
+  }).join('');
+  const dataPts = axes.map((ax, i) => pointAt(i, normAxis(st[ax.key], ax.key, ax.invert)));
+  const dataPoly = `<polygon points="${dataPts.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="var(--gold)" opacity="0.28" stroke="var(--gold)" stroke-width="2" stroke-linejoin="round"/>`;
+  const dataDots = dataPts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3" fill="var(--gold-soft)"/>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" style="width:100%; max-width:320px; height:auto; display:block;">
+    ${ringPolys}
+    ${axisLines}
+    ${dataPoly}
+    ${dataDots}
+    ${labels}
+  </svg>`;
+}
+
+function renderDistDonut(st) {
+  if (!st.games) return '';
+  const colors = ['#c9a227', '#cfd6d1', '#8a6a3a', '#d97a6f'];
+  const labels = ['1着', '2着', '3着', '4着'];
+  const r = 46, cx = 64, cy = 64, circumference = 2 * Math.PI * r;
+  let offsetAcc = 0;
+  const segs = st.placements.map((count, i) => {
+    const frac = count / st.games;
+    const dash = frac * circumference;
+    const seg = frac > 0 ? `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${colors[i]}" stroke-width="16"
+      stroke-dasharray="${dash.toFixed(2)} ${(circumference - dash).toFixed(2)}"
+      stroke-dashoffset="${(-offsetAcc).toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/>` : '';
+    offsetAcc += dash;
+    return seg;
+  }).join('');
+  const legend = st.placements.map((count, i) => {
+    const pct = st.games ? (count / st.games * 100).toFixed(0) : 0;
+    return `<span><i style="background:${colors[i]}"></i>${labels[i]} ${pct}%</span>`;
+  }).join('');
+  return `<div class="dist-donut">
+    <svg viewBox="0 0 128 128" style="width:130px;height:130px;display:block;">
+      ${segs}
+      <circle cx="${cx}" cy="${cy}" r="${r - 9}" fill="var(--felt-deep2)"/>
+      <text x="${cx}" y="${cy - 1}" text-anchor="middle" font-size="19" font-weight="800" fill="var(--ivory)">${st.games}</text>
+      <text x="${cx}" y="${cy + 15}" text-anchor="middle" font-size="9" fill="var(--ivory-soft)" opacity="0.7">局</text>
+    </svg>
+    <div class="dist-legend">${legend}</div>
+  </div>`;
+}
+
+function renderPlayerPage(name) {
       const st = stats.list.find(s => s.name === name);
       const el = document.getElementById('view-player');
       if (!st) {
@@ -1424,14 +1631,16 @@
         }).join('');
 
       const historyTable = st.games ? `<table class="mini-table">
-      <thead><tr><th>対局日</th><th>着順</th><th>通算</th><th>1回戦</th><th>2回戦</th><th>3回戦</th><th>4回戦</th></tr></thead>
+      <thead><tr><th>対局日</th><th>着順</th><th>合計</th><th>1回戦</th><th>2回戦</th><th>3回戦</th><th>4回戦</th></tr></thead>
       <tbody>${historyRows}</tbody>
     </table>` : `<div class="empty-state">まだ対局データがありません</div>`;
+
+      const heroRankClass = st.rank === 1 ? "r1" : st.rank === 2 ? "r2" : st.rank === 3 ? "r3" : "";
 
       el.innerHTML = `
     <a class="back-link" href="#/">← 総合成績に戻る</a>
     <div class="player-hero">
-      <div class="rank-badge">${st.rank ?? '―'}</div>
+      <div class="rank-badge ${heroRankClass}">${st.rank ?? '―'}</div>
       <div class="player-hero-body">
         <div class="player-hero-name">${st.name}</div>
         <div class="player-hero-sub">${st.games ? `通算${st.rank}位 · 全${st.games}局` : '対局データなし'}</div>
@@ -1443,6 +1652,7 @@
     </div>
 
     <div class="stat-grid">
+      <div class="stat-card"><div class="lbl">順位率</div><div class="val">${fmtRank(st.avgRank)}</div></div>
       <div class="stat-card"><div class="lbl">平均得点</div><div class="val ${numClass(st.avg)}">${fmt1(st.avg)}</div></div>
       <div class="stat-card"><div class="lbl">トップ率</div><div class="val">${fmtPct(st.topRate)}</div></div>
       <div class="stat-card"><div class="lbl">連対率</div><div class="val">${fmtPct(st.top2Rate)}</div></div>
@@ -1450,8 +1660,14 @@
       <div class="stat-card"><div class="lbl">ベストスコア</div><div class="val ${numClass(st.best)}">${fmt1(st.best)}</div></div>
     </div>
 
+    <div class="panel-title">スタッツバランス</div>
+    <div class="radar-wrap">${st.games ? renderRadarSVG(st) : '<div class="empty-state">対局データがありません</div>'}</div>
+
     <div class="panel-title">着順分布</div>
-    <div class="dist-rows">${st.games ? distRows : '<div class="empty-state">対局データがありません</div>'}</div>
+    <div class="dist-flex">
+      <div class="dist-rows">${st.games ? distRows : '<div class="empty-state">対局データがありません</div>'}</div>
+      ${st.games ? renderDistDonut(st) : ''}
+    </div>
 
     <div class="panel-title">通算得点の推移</div>
     <div class="trend-wrap">${renderTrendSVG(name)}</div>
@@ -1522,7 +1738,7 @@
           return { name, total };
         }).sort((a, b) => b.total - a.total);
         summaryHTML = `<table class="summary-table">
-      <thead><tr><th>名前</th><th>着順</th><th>通算</th></tr></thead>
+      <thead><tr><th>名前</th><th>着順</th><th>合計</th></tr></thead>
       <tbody>${totals.map((t, i) => `<tr><td>${t.name}</td><td>${i + 1}</td><td class="${numClass(t.total)}">${fmt1(t.total)}</td></tr>`).join('')}</tbody>
     </table>`;
       }
@@ -1574,9 +1790,9 @@
         ${draft.editingDate ? `<button type="button" class="btn ghost" id="u-cancel-edit-btn">編集をやめる</button>` : ''}
         <span class="status-msg ${pendingStatus ? (pendingStatus.ok ? 'ok' : 'err') : ''}" id="u-status">${pendingStatus ? pendingStatus.text : ''}</span>
       </div>
-      <div class="save-note">${storageAvailable
-          ? 'このページを開いている全員に共有されます。保存すると通算成績表にすぐ反映されます。'
-          : '※ この環境では自動保存が有効になっていないため、更新内容はページを閉じると失われます。'}</div>
+      <div class="save-note">${API_CONFIGURED
+          ? 'Googleスプレッドシートに保存されます。このページを見ている全員に共有され、保存すると通算成績表にもすぐ反映されます。'
+          : '※ スプレッドシート連携がまだ設定されていません。このままだと更新内容はページを閉じると失われます。'}</div>
     </div>
 
     <h2 class="panel-title">登録済みの対局</h2>
@@ -1602,11 +1818,14 @@
         });
       });
 
-      document.getElementById('u-add-player-btn').addEventListener('click', () => {
+      document.getElementById('u-add-player-btn').addEventListener('click', async () => {
         const input = document.getElementById('u-new-player');
         const name = input.value.trim();
         if (!name) return;
-        if (!appData.playerNames.includes(name)) appData.playerNames.push(name);
+        if (!appData.playerNames.includes(name)) {
+          appData.playerNames.push(name);
+          await addPlayerToSheet(name);
+        }
         if (!draft.participants.includes(name)) draft.participants.push(name);
         renderUpdatePage();
       });
@@ -1648,7 +1867,7 @@
           const date = btn.dataset.date;
           if (!confirm(`${dateLabel(date)}の対局結果を削除します。よろしいですか？`)) return;
           appData.sessions = appData.sessions.filter(s => s.date !== date);
-          await saveData();
+          await deleteSessionFromSheet(date);
           refreshAll();
           renderUpdatePage();
         });
@@ -1729,17 +1948,18 @@
 
       if (draft.editingDate && draft.editingDate !== draft.date) {
         appData.sessions = appData.sessions.filter(s => s.date !== draft.editingDate);
+        await deleteSessionFromSheet(draft.editingDate);
       }
       const idx = appData.sessions.findIndex(s => s.date === draft.date);
       if (idx > -1) { appData.sessions[idx] = session; }
       else { appData.sessions.push(session); }
 
-      const saved = await saveData();
+      const saved = await saveSessionToSheet(draft.date, results);
       refreshAll();
 
       pendingStatus = saved
         ? { ok: true, text: '保存しました。' }
-        : { ok: false, text: '保存に失敗しました（この環境では自動保存が使えない可能性があります）。' };
+        : { ok: false, text: API_CONFIGURED ? '保存に失敗しました。スプレッドシートAPIの設定をご確認ください。' : '保存に失敗しました（スプレッドシート連携が未設定のため、この内容はページを閉じると消えます）。' };
 
       draft = newDraft();
       renderUpdatePage();
@@ -1789,7 +2009,7 @@
         if (key === "none") return;
         th.addEventListener('click', () => {
           if (currentSort.key === key) { currentSort.dir *= -1; }
-          else { currentSort = { key, dir: key === 'name' ? 1 : -1 }; }
+          else { currentSort = { key, dir: (key === 'name' || key === 'avgRank') ? 1 : -1 }; }
           renderTable(currentSort.key, currentSort.dir);
         });
       });
