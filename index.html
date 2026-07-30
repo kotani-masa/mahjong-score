@@ -1435,7 +1435,7 @@
     const nameLink = name => `<a class="name-link" href="#/player/${encodeURIComponent(name)}">${name}</a>`;
     const roundCellHTML = ([score, rk]) => {
       if (score === null || score === undefined) {
-        return `<td><div class="round-cell"><span class="muted">抜け番</span></div></td>`;
+        return `<td><div class="round-cell"><span class="muted">―</span></div></td>`;
       }
       return `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`;
     };
@@ -1534,7 +1534,10 @@
       stats.sessions.forEach(s => {
         const r = s.results[name];
         if (!r) return;
-        r.rounds.forEach(([score]) => { pts.push(pts[pts.length - 1] + score); });
+        r.rounds.forEach(([score]) => {
+          if (score === null || score === undefined) return; // 抜け番はグラフに反映しない
+          pts.push(pts[pts.length - 1] + score);
+        });
       });
       return pts;
     }
@@ -1928,11 +1931,14 @@ function renderPlayerPage(name) {
         });
       });
 
-      document.getElementById('u-add-player-btn').addEventListener('click', async () => {
+      document.getElementById('u-add-player-btn').addEventListener('click', async (e) => {
         const input = document.getElementById('u-new-player');
         const name = input.value.trim();
         if (!name) return;
         if (!appData.playerNames.includes(name)) {
+          const btn = e.currentTarget;
+          btn.disabled = true;
+          btn.textContent = '追加中…';
           appData.playerNames.push(name);
           await addPlayerToSheet(name);
         }
@@ -1976,6 +1982,8 @@ function renderPlayerPage(name) {
         btn.addEventListener('click', async () => {
           const date = btn.dataset.date;
           if (!confirm(`${dateLabel(date)}の対局結果を削除します。よろしいですか？`)) return;
+          btn.disabled = true;
+          btn.textContent = '削除中…';
           appData.sessions = appData.sessions.filter(s => s.date !== date);
           await deleteSessionFromSheet(date);
           refreshAll();
@@ -2058,6 +2066,11 @@ function renderPlayerPage(name) {
       if (existingIdx > -1 && draft.date !== draft.editingDate) {
         if (!confirm(`${dateLabel(draft.date)}にはすでに対局結果があります。上書きしますか？`)) return;
       }
+
+      const saveBtn = document.getElementById('u-save-btn');
+      if (saveBtn) { saveBtn.disabled = true; saveBtn.textContent = '保存中…'; }
+      statusEl.className = 'status-msg';
+      statusEl.textContent = '保存中…';
 
       const results = {};
       draft.participants.forEach(name => {
