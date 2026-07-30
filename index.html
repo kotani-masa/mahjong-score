@@ -59,6 +59,99 @@
     }
 
     /* ---------- Header ---------- */
+    #loading-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, rgba(200, 166, 60, 0.10), transparent 60%),
+        linear-gradient(180deg, var(--felt-deep) 0%, var(--felt-deep2) 100%);
+      transition: opacity 0.4s ease;
+    }
+
+    #loading-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .loading-tile {
+      text-align: center;
+      color: var(--ivory);
+    }
+
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto 20px;
+      border-radius: 8px;
+      background: linear-gradient(180deg, var(--ivory) 0%, var(--ivory-soft) 100%);
+      animation: spin-tile 1.1s ease-in-out infinite;
+      box-shadow: var(--shadow);
+    }
+
+    @keyframes spin-tile {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(0.85); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    .loading-text {
+      font-family: 'Shippori Mincho', serif;
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: .08em;
+      color: var(--gold-soft);
+    }
+
+    .loading-sub {
+      font-size: 11.5px;
+      color: var(--ivory-soft);
+      opacity: .6;
+      margin-top: 8px;
+    }
+
+    .lock-card {
+      background: rgba(241, 232, 214, 0.04);
+      border: 1px solid var(--felt-line);
+      border-radius: 14px;
+      padding: 40px 30px;
+      max-width: 320px;
+      margin: 40px auto 0;
+      text-align: center;
+    }
+
+    .lock-card .lock-icon {
+      font-size: 28px;
+      margin-bottom: 14px;
+    }
+
+    .lock-card p {
+      font-size: 12.5px;
+      color: var(--ivory-soft);
+      opacity: .75;
+      margin: 0 0 18px;
+      line-height: 1.7;
+    }
+
+    .lock-input {
+      width: 140px;
+      text-align: center;
+      font-size: 22px;
+      letter-spacing: .5em;
+      padding: 10px 0 10px 0.5em;
+      margin-bottom: 14px;
+    }
+
+    .lock-error {
+      font-size: 12px;
+      color: var(--red-soft);
+      min-height: 16px;
+      margin-bottom: 10px;
+    }
+
     header {
       padding: 56px 20px 32px;
       text-align: center;
@@ -1057,6 +1150,13 @@
 </head>
 
 <body>
+  <div id="loading-overlay">
+    <div class="loading-tile">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">読み込み中…</div>
+      <div class="loading-sub">スプレッドシートから成績を取得しています</div>
+    </div>
+  </div>
   <div class="wrap">
 
     <header>
@@ -1189,13 +1289,13 @@
     }
 
     function normalizeSession(s) {
-      // rounds付きの参加者から順位を自動計算して保持する
+      // rounds付きの参加者から順位を自動計算して保持する（null/undefinedはその回戦の抜け番として扱う）
       const names = Object.keys(s.results);
       const nRounds = Math.max(0, ...names.map(n => s.results[n].rounds.length));
       const roundRanks = [];
       for (let i = 0; i < nRounds; i++) {
         const entries = names
-          .filter(n => s.results[n].rounds[i] !== undefined)
+          .filter(n => s.results[n].rounds[i] !== undefined && s.results[n].rounds[i] !== null)
           .map(n => ({ n, score: s.results[n].rounds[i] }))
           .sort((a, b) => b.score - a.score);
         const rankMap = {};
@@ -1203,7 +1303,11 @@
         roundRanks.push(rankMap);
       }
       const totals = {};
-      names.forEach(n => { totals[n] = s.results[n].rounds.reduce((a, b) => a + b, 0); });
+      names.forEach(n => {
+        totals[n] = s.results[n].rounds
+          .filter(v => v !== undefined && v !== null)
+          .reduce((a, b) => a + b, 0);
+      });
       const sessionOrder = [...names].sort((a, b) => totals[b] - totals[a]);
       const sessionRankMap = {};
       sessionOrder.forEach((n, idx) => { sessionRankMap[n] = idx + 1; });
@@ -1213,7 +1317,9 @@
         results[n] = {
           rank: sessionRankMap[n],
           total: totals[n],
-          rounds: s.results[n].rounds.map((score, i) => [score, roundRanks[i][n]]),
+          rounds: s.results[n].rounds.map((score, i) =>
+            (score === undefined || score === null) ? [null, null] : [score, roundRanks[i][n]]
+          ),
         };
       });
       return { date: s.date, label: s.label || dateLabel(s.date), rounds: nRounds, results };
@@ -1285,6 +1391,7 @@
           const st = stats[name];
           st.sessionRanks.push({ date: s.date, rank: r.rank });
           r.rounds.forEach(([score, rk]) => {
+            if (score === null || score === undefined || rk === null || rk === undefined) return; // 抜け番はカウントしない
             st.placements[rk - 1] += 1;
             st.scores.push(score);
             st.total += score;
@@ -1326,6 +1433,12 @@
     const fmtPct = v => v === null || v === undefined ? "―" : (v * 100).toFixed(1) + "%";
     const numClass = v => v === null || v === undefined ? "" : (v > 0 ? "num plus" : v < 0 ? "num minus" : "num");
     const nameLink = name => `<a class="name-link" href="#/player/${encodeURIComponent(name)}">${name}</a>`;
+    const roundCellHTML = ([score, rk]) => {
+      if (score === null || score === undefined) {
+        return `<td><div class="round-cell"><span class="muted">抜け番</span></div></td>`;
+      }
+      return `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`;
+    };
 
     /* ====== 総合順位（全員表示・成績順）====== */
     function renderRankStrip() {
@@ -1392,9 +1505,7 @@
         const rows = Object.entries(s.results)
           .sort((a, b) => a[1].rank - b[1].rank)
           .map(([name, r]) => {
-            const roundCells = r.rounds.map(([score, rk]) =>
-              `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`
-            ).join("");
+            const roundCells = r.rounds.map(roundCellHTML).join("");
             const rkClass = r.rank === 1 ? "r1" : r.rank === 2 ? "r2" : r.rank === 3 ? "r3" : "";
             return `<tr>
           <td>${nameLink(name)}</td>
@@ -1619,9 +1730,7 @@ function renderPlayerPage(name) {
         .map(s => {
           const r = s.results[name];
           const rc = r.rank === 1 ? "r1" : r.rank === 2 ? "r2" : r.rank === 3 ? "r3" : "";
-          const roundCells = r.rounds.map(([score, rk]) =>
-            `<td><div class="round-cell"><span class="${numClass(score)}">${fmt1(score)}</span><span class="rk-tag">${rk}着</span></div></td>`
-          ).join('');
+          const roundCells = r.rounds.map(roundCellHTML).join('');
           return `<tr>
         <td>${s.label}</td>
         <td><span class="rk ${rc}" style="width:20px;height:20px;font-size:11px;">${r.rank}</span></td>
@@ -1660,7 +1769,7 @@ function renderPlayerPage(name) {
       <div class="stat-card"><div class="lbl">ベストスコア</div><div class="val ${numClass(st.best)}">${fmt1(st.best)}</div></div>
     </div>
 
-    <div class="panel-title">総合評価</div>
+    <div class="panel-title">スタッツバランス</div>
     <div class="radar-wrap">${st.games ? renderRadarSVG(st) : '<div class="empty-state">対局データがありません</div>'}</div>
 
     <div class="panel-title">着順分布</div>
@@ -1717,7 +1826,7 @@ function renderPlayerPage(name) {
           const val = round[name] !== undefined ? round[name] : "";
           return `<div class="round-input-item">
         <span>${name}</span>
-        <input type="number" step="0.1" inputmode="decimal" data-round="${ri}" data-name="${name}" class="score-input" value="${val}">
+        <input type="number" step="0.1" inputmode="decimal" placeholder="抜け番" data-round="${ri}" data-name="${name}" class="score-input" value="${val}">
       </div>`;
         }).join('');
         return `<div class="round-block">
@@ -1777,6 +1886,7 @@ function renderPlayerPage(name) {
           <label class="field-label" style="margin:0;">回戦ごとの得失点</label>
           <button type="button" class="btn ghost small" id="u-add-round-btn">＋ 回戦を追加</button>
         </div>
+        <div class="sec-note" style="margin-bottom:10px;">5人以上参加している場合、その回戦を空欄のままにすると「抜け番」として扱われます</div>
         <div id="u-rounds">${roundsHTML}</div>
       </div>
 
@@ -1924,14 +2034,23 @@ function renderPlayerPage(name) {
       if (!draft.date) { statusEl.className = 'status-msg err'; statusEl.textContent = '対局日を入力してください。'; return; }
       if (draft.participants.length < 2) { statusEl.className = 'status-msg err'; statusEl.textContent = '参加者を2人以上選んでください。'; return; }
       if (draft.rounds.length < 1) { statusEl.className = 'status-msg err'; statusEl.textContent = '回戦を1つ以上追加してください。'; return; }
-      for (const round of draft.rounds) {
-        for (const name of draft.participants) {
-          const v = round[name];
-          if (v === undefined || v === "" || Number.isNaN(Number(v))) {
-            statusEl.className = 'status-msg err';
-            statusEl.textContent = 'すべてのマスに得失点を入力してください。';
-            return;
-          }
+
+      const isFilled = v => v !== undefined && v !== "" && !Number.isNaN(Number(v));
+
+      for (let ri = 0; ri < draft.rounds.length; ri++) {
+        const filledCount = draft.participants.filter(name => isFilled(draft.rounds[ri][name])).length;
+        if (filledCount === 0) {
+          statusEl.className = 'status-msg err';
+          statusEl.textContent = `${ri + 1}回戦の得失点が1件も入力されていません。`;
+          return;
+        }
+      }
+      for (const name of draft.participants) {
+        const playedAny = draft.rounds.some(r => isFilled(r[name]));
+        if (!playedAny) {
+          statusEl.className = 'status-msg err';
+          statusEl.textContent = `${name}さんの得失点が1回戦分も入力されていません。参加者から外すか、得失点を入力してください。`;
+          return;
         }
       }
 
@@ -1942,7 +2061,7 @@ function renderPlayerPage(name) {
 
       const results = {};
       draft.participants.forEach(name => {
-        results[name] = { rounds: draft.rounds.map(r => Number(r[name])) };
+        results[name] = { rounds: draft.rounds.map(r => isFilled(r[name]) ? Number(r[name]) : null) };
       });
       const session = { date: draft.date, label: dateLabel(draft.date), results };
 
@@ -1966,6 +2085,40 @@ function renderPlayerPage(name) {
     }
 
     /* ====== ルーティング ====== */
+    /* ====== 対局結果登録のパスワードロック ====== */
+    const UPDATE_PASSWORD = "1124";
+    let isUnlocked = false;
+
+    function renderLockScreen() {
+      const el = document.getElementById('view-update');
+      el.innerHTML = `
+    <a class="back-link" href="#/">← 総合成績に戻る</a>
+    <div class="lock-card">
+      <div class="lock-icon">🀄</div>
+      <p>対局結果の登録には4桁のパスワードが必要です。</p>
+      <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" class="lock-input" id="lock-input" autocomplete="off">
+      <div class="lock-error" id="lock-error"></div>
+      <button type="button" class="btn" id="lock-submit-btn">開く</button>
+    </div>
+  `;
+      const input = document.getElementById('lock-input');
+      const submit = () => {
+        const errorEl = document.getElementById('lock-error');
+        if (input.value === UPDATE_PASSWORD) {
+          isUnlocked = true;
+          if (!draft) draft = newDraft();
+          renderUpdatePage();
+        } else {
+          errorEl.textContent = 'パスワードが違います。';
+          input.value = '';
+          input.focus();
+        }
+      };
+      document.getElementById('lock-submit-btn').addEventListener('click', submit);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') submit(); });
+      input.focus();
+    }
+
     function route() {
       const hash = location.hash;
       const playerMatch = hash.match(/^#\/player\/(.+)$/);
@@ -1981,8 +2134,12 @@ function renderPlayerPage(name) {
         renderPlayerPage(decodeURIComponent(playerMatch[1]));
         player.style.display = 'block';
       } else if (hash === '#/update') {
-        if (!draft) draft = newDraft();
-        renderUpdatePage();
+        if (isUnlocked) {
+          if (!draft) draft = newDraft();
+          renderUpdatePage();
+        } else {
+          renderLockScreen();
+        }
         update.style.display = 'block';
       } else {
         home.style.display = '';
@@ -2021,6 +2178,11 @@ function renderPlayerPage(name) {
       refreshAll();
       bindSortHandlers();
       route();
+      const overlay = document.getElementById('loading-overlay');
+      if (overlay) {
+        overlay.classList.add('hidden');
+        setTimeout(() => { overlay.style.display = 'none'; }, 450);
+      }
     })();
   </script>
 </body>
