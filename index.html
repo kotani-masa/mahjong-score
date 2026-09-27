@@ -25,7 +25,17 @@
       --red-soft: #d97a6f;
       --green-tile: #2f6b52;
       --ok: #7fd8ac;
+      --glow: rgba(200, 166, 60, 0.10);
       --shadow: 0 18px 40px -18px rgba(0, 0, 0, 0.55);
+    }
+
+    /* 三麻モード：四麻の深緑フェルトに対して、シックな濃紺のテーマ */
+    :root[data-mode="sanma"] {
+      --felt-deep: #16283f;
+      --felt-deep2: #0a1420;
+      --felt-line: rgba(214, 226, 245, 0.14);
+      --green-tile: #3d7099;
+      --glow: rgba(94, 150, 224, 0.14);
     }
 
     * {
@@ -39,7 +49,7 @@
     body {
       margin: 0;
       background:
-        radial-gradient(1200px 600px at 50% -10%, rgba(200, 166, 60, 0.10), transparent 60%),
+        radial-gradient(1200px 600px at 50% -10%, var(--glow), transparent 60%),
         repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0 2px, transparent 2px 26px),
         linear-gradient(180deg, var(--felt-deep) 0%, var(--felt-deep2) 100%);
       color: var(--ivory);
@@ -67,7 +77,7 @@
       align-items: center;
       justify-content: center;
       background:
-        radial-gradient(1200px 600px at 50% -10%, rgba(200, 166, 60, 0.10), transparent 60%),
+        radial-gradient(1200px 600px at 50% -10%, var(--glow), transparent 60%),
         linear-gradient(180deg, var(--felt-deep) 0%, var(--felt-deep2) 100%);
       transition: opacity 0.4s ease;
     }
@@ -215,7 +225,44 @@
     .header-actions {
       display: flex;
       justify-content: center;
+      align-items: center;
+      gap: 14px;
       margin-top: 22px;
+      flex-wrap: wrap;
+    }
+
+    .mode-toggle {
+      display: inline-flex;
+      background: rgba(241, 232, 214, 0.06);
+      border: 1px solid var(--felt-line);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .mode-btn {
+      border: none;
+      background: transparent;
+      color: var(--ivory-soft);
+      font-family: inherit;
+      font-size: 12.5px;
+      font-weight: 700;
+      letter-spacing: .03em;
+      padding: 7px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      opacity: .7;
+      transition: all .15s;
+    }
+
+    .mode-btn:hover {
+      opacity: 1;
+    }
+
+    .mode-btn.active {
+      background: var(--gold);
+      color: #2b2103;
+      opacity: 1;
     }
 
     .btn {
@@ -1160,14 +1207,18 @@
   <div class="wrap">
 
     <header>
-      <div class="eyebrow">MAHJONG LEAGUE · フルコンプ麻雀グループ</div>
-      <h1>麻雀成績記録<span></span></h1>
+      <div class="eyebrow" id="header-eyebrow">MAHJONG LEAGUE · フルコンプ麻雀グループ</div>
+      <h1 id="header-title">麻雀成績記録<span></span></h1>
       <div class="tile-rule">
         <div class="bar"></div>
         <div class="dot"></div>
         <div class="bar"></div>
       </div>
       <div class="header-actions">
+        <div class="mode-toggle" id="mode-toggle">
+          <button type="button" class="mode-btn" data-mode="yonma">四麻</button>
+          <button type="button" class="mode-btn" data-mode="sanma">三麻</button>
+        </div>
         <a class="btn" href="#/update">＋ 対局結果を登録する</a>
       </div>
     </header>
@@ -1232,6 +1283,7 @@
       sessions: [
         {
           date: "2026-07-16",
+          gameType: "yonma",
           label: "2026年7月16日",
           results: {
             "大浦": { rounds: [32.7, 5.6, -1, -24.2] },
@@ -1242,6 +1294,7 @@
         },
         {
           date: "2026-07-28",
+          gameType: "yonma",
           label: "2026年7月28日",
           results: {
             "大浦": { rounds: [36.3, 37.4, -5.9, 31.3] },
@@ -1251,6 +1304,43 @@
           }
         }
       ]
+    };
+
+    /* ====== グループ設定 ======
+       ひとつのサイト・ひとつのスプレッドシートで、複数の麻雀グループを扱う仕組み。
+       URLの ?group=xxx でグループを切り替える（UI上に切り替えは出さない＝各グループは自分のリンクしか知らない）。
+       ?group= を付けない場合は "fullcomp"（大浦さんたちの既存グループ、これまで通り Players / Rounds タブ）になる。
+       新しいグループを増やすときは、下の GROUP_CONFIG に1エントリ追加するだけでOK。
+       スプレッドシート側は Apps Script が自動でグループごとのタブ（Players_xxx / Rounds_xxx）を作成する。 */
+    const GROUP_ID = (new URLSearchParams(location.search).get('group') || 'fullcomp').trim() || 'fullcomp';
+
+    const GROUP_CONFIG = {
+      fullcomp: {
+        eyebrow: "MAHJONG LEAGUE · フルコンプ麻雀グループ",
+        title: "麻雀成績記録",
+        password: "1124",
+        seed: DEFAULT_DATA, // 初回だけ流し込む初期データ
+      },
+      chosei: {
+        eyebrow: "MAHJONG LEAGUE · 長声麻雀グループ",
+        title: "麻雀成績記録",
+        password: "1124",
+        seed: { playerNames: [], sessions: [] }, // 空の状態からスタート
+      },
+      // 新しいグループはここに追加する。例:
+      // groupc: {
+      //   eyebrow: "MAHJONG LEAGUE · 新しいグループ名",
+      //   title: "麻雀成績記録",
+      //   password: "0000",
+      //   seed: { playerNames: [], sessions: [] },
+      // },
+    };
+
+    const CURRENT_GROUP = GROUP_CONFIG[GROUP_ID] || {
+      eyebrow: "MAHJONG LEAGUE",
+      title: "麻雀成績記録",
+      password: "1124",
+      seed: { playerNames: [], sessions: [] },
     };
 
     /* ====== 保存（Googleスプレッドシート + Apps Script API）======
@@ -1273,7 +1363,7 @@
         const res = await fetch(SHEET_API_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain;charset=utf-8" }, // プリフライトを避けるため text/plain で送信
-          body: JSON.stringify({ action, payload }),
+          body: JSON.stringify({ action, payload, group: GROUP_ID }),
         });
         return await res.json();
       } catch (e) {
@@ -1283,7 +1373,7 @@
     }
 
     async function apiFetchAll() {
-      const res = await fetch(SHEET_API_URL + "?action=getAll", { method: "GET" });
+      const res = await fetch(SHEET_API_URL + "?action=getAll&group=" + encodeURIComponent(GROUP_ID), { method: "GET" });
       if (!res.ok) throw new Error("getAll failed: " + res.status);
       return await res.json();
     }
@@ -1322,16 +1412,17 @@
           ),
         };
       });
-      return { date: s.date, label: s.label || dateLabel(s.date), rounds: nRounds, results };
+      return { date: s.date, gameType: s.gameType || 'yonma', label: s.label || dateLabel(s.date), rounds: nRounds, results };
     }
 
     async function seedInitialData() {
-      // スプレッドシートが空のときだけ、最初の対局データを一度だけ流し込む
-      for (const name of DEFAULT_DATA.playerNames) {
+      // スプレッドシートが空のときだけ、このグループの初期データを一度だけ流し込む
+      const seed = CURRENT_GROUP.seed || { playerNames: [], sessions: [] };
+      for (const name of seed.playerNames) {
         await apiCall("addPlayer", { name });
       }
-      for (const s of DEFAULT_DATA.sessions) {
-        await apiCall("saveSession", { date: s.date, results: s.results });
+      for (const s of seed.sessions) {
+        await apiCall("saveSession", { date: s.date, gameType: s.gameType || 'yonma', results: s.results });
       }
     }
 
@@ -1343,8 +1434,9 @@
             await seedInitialData();
             data = await apiFetchAll();
           }
+          const seed = CURRENT_GROUP.seed || { playerNames: [], sessions: [] };
           appData = {
-            playerNames: (data.playerNames && data.playerNames.length) ? data.playerNames : DEFAULT_DATA.playerNames,
+            playerNames: (data.playerNames && data.playerNames.length) ? data.playerNames : seed.playerNames,
             sessions: data.sessions || [],
           };
           storageAvailable = true;
@@ -1354,20 +1446,20 @@
         }
       }
       storageAvailable = false;
-      appData = JSON.parse(JSON.stringify(DEFAULT_DATA));
+      appData = JSON.parse(JSON.stringify(CURRENT_GROUP.seed || { playerNames: [], sessions: [] }));
     }
 
     // 対局1件の保存（新規・上書き）。成功したかどうかを返す。
-    async function saveSessionToSheet(date, results) {
+    async function saveSessionToSheet(date, gameType, results) {
       if (!API_CONFIGURED) { storageAvailable = false; return false; }
-      const res = await apiCall("saveSession", { date, results });
+      const res = await apiCall("saveSession", { date, gameType, results });
       storageAvailable = !!(res && res.ok);
       return storageAvailable;
     }
 
-    async function deleteSessionFromSheet(date) {
+    async function deleteSessionFromSheet(date, gameType) {
       if (!API_CONFIGURED) { storageAvailable = false; return false; }
-      const res = await apiCall("deleteSession", { date });
+      const res = await apiCall("deleteSession", { date, gameType });
       storageAvailable = !!(res && res.ok);
       return storageAvailable;
     }
@@ -1379,20 +1471,25 @@
     }
 
     /* ====== 集計 ====== */
-    function buildStats() {
+    function buildStats(mode) {
+      const rankCount = mode === 'sanma' ? 3 : 4;
+      const emptyPlacements = () => new Array(rankCount).fill(0);
       const stats = {};
       appData.playerNames.forEach(name => {
-        stats[name] = { name, total: 0, games: 0, placements: [0, 0, 0, 0], scores: [], sessionRanks: [] };
+        stats[name] = { name, total: 0, games: 0, placements: emptyPlacements(), scores: [], sessionRanks: [] };
       });
-      const sessionsNorm = appData.sessions.map(normalizeSession).sort((a, b) => a.date.localeCompare(b.date));
+      const sessionsNorm = appData.sessions
+        .map(normalizeSession)
+        .filter(s => (s.gameType || 'yonma') === mode)
+        .sort((a, b) => a.date.localeCompare(b.date));
       sessionsNorm.forEach(s => {
         Object.entries(s.results).forEach(([name, r]) => {
-          if (!stats[name]) { stats[name] = { name, total: 0, games: 0, placements: [0, 0, 0, 0], scores: [], sessionRanks: [] }; }
+          if (!stats[name]) { stats[name] = { name, total: 0, games: 0, placements: emptyPlacements(), scores: [], sessionRanks: [] }; }
           const st = stats[name];
           st.sessionRanks.push({ date: s.date, rank: r.rank });
           r.rounds.forEach(([score, rk]) => {
             if (score === null || score === undefined || rk === null || rk === undefined) return; // 抜け番はカウントしない
-            st.placements[rk - 1] += 1;
+            if (rk >= 1 && rk <= rankCount) st.placements[rk - 1] += 1;
             st.scores.push(score);
             st.total += score;
             st.games += 1;
@@ -1402,10 +1499,10 @@
       Object.values(stats).forEach(st => {
         const n = st.games;
         st.avg = n ? st.total / n : null;
-        st.avgRank = n ? (st.placements[0] * 1 + st.placements[1] * 2 + st.placements[2] * 3 + st.placements[3] * 4) / n : null;
+        st.avgRank = n ? st.placements.reduce((acc, count, i) => acc + count * (i + 1), 0) / n : null;
         st.topRate = n ? st.placements[0] / n : null;
         st.top2Rate = n ? (st.placements[0] + st.placements[1]) / n : null;
-        st.avoidLast = n ? 1 - (st.placements[3] / n) : null;
+        st.avoidLast = n ? 1 - (st.placements[rankCount - 1] / n) : null;
         st.best = st.scores.length ? Math.max(...st.scores) : null;
       });
       const ranked = Object.values(stats).filter(s => s.games > 0).sort((a, b) => b.total - a.total);
@@ -1425,7 +1522,7 @@
         avoidLast: rangeOf('avoidLast'),
         best: rangeOf('best'),
       };
-      return { list: [...ranked, ...unranked], sessions: sessionsNorm, ranges };
+      return { list: [...ranked, ...unranked], sessions: sessionsNorm, ranges, mode, rankCount };
     }
 
     const fmt1 = v => v === null || v === undefined || Number.isNaN(v) ? "―" : (v > 0 ? "+" : "") + v.toFixed(1);
@@ -1718,8 +1815,8 @@ function renderPlayerPage(name) {
         el.innerHTML = `<a class="back-link" href="#/">← 総合成績に戻る</a><div class="empty-state">選手が見つかりませんでした</div>`;
         return;
       }
-      const distRows = ['1', '2', '3', '4'].map((d, i) => {
-        const count = st.placements[i];
+      const distRows = st.placements.map((count, i) => {
+        const d = i + 1;
         const pct = st.games ? (count / st.games * 100) : 0;
         return `<div class="dist-row">
       <div class="dist-lbl">${d}着</div>
@@ -1772,7 +1869,7 @@ function renderPlayerPage(name) {
       <div class="stat-card"><div class="lbl">ベストスコア</div><div class="val ${numClass(st.best)}">${fmt1(st.best)}</div></div>
     </div>
 
-    <div class="panel-title">総合評価</div>
+    <div class="panel-title">スタッツバランス</div>
     <div class="radar-wrap">${st.games ? renderRadarSVG(st) : '<div class="empty-state">対局データがありません</div>'}</div>
 
     <div class="panel-title">着順分布</div>
@@ -1796,9 +1893,11 @@ function renderPlayerPage(name) {
     function newDraft() {
       return {
         date: "",
+        gameType: currentMode,
         participants: [], // 名前の配列（選んだ順）
         rounds: [{}],    // [{name:score}, ...]
         editingDate: null, // 既存の対局を編集中ならその date
+        editingGameType: null,
       };
     }
 
@@ -1813,6 +1912,8 @@ function renderPlayerPage(name) {
 
     function renderUpdatePage() {
       const el = document.getElementById('view-update');
+      const rankCount = draft.gameType === 'sanma' ? 3 : 4;
+      const modeLabel = draft.gameType === 'sanma' ? '三麻' : '四麻';
 
       const chips = appData.playerNames.map(name => {
         const sel = draft.participants.includes(name);
@@ -1859,15 +1960,16 @@ function renderPlayerPage(name) {
         return `<div class="existing-row">
       <div><span class="exr-date">${s.label}</span><span class="exr-meta">${Object.keys(s.results).join(' / ')}</span></div>
       <div style="display:flex; gap:8px;">
-        <button type="button" class="btn ghost small edit-session-btn" data-date="${s.date}">編集</button>
-        <button type="button" class="btn danger small delete-session-btn" data-date="${s.date}">削除</button>
+        <button type="button" class="btn ghost small edit-session-btn" data-date="${s.date}" data-game-type="${s.gameType}">編集</button>
+        <button type="button" class="btn danger small delete-session-btn" data-date="${s.date}" data-game-type="${s.gameType}">削除</button>
       </div>
     </div>`;
-      }).join('') : `<div class="empty-state">まだ対局が登録されていません</div>`;
+      }).join('') : `<div class="empty-state">まだ${modeLabel}の対局が登録されていません</div>`;
 
       el.innerHTML = `
     <a class="back-link" href="#/">← 総合成績に戻る</a>
-    <h2 class="panel-title" style="margin-top:0;">${draft.editingDate ? '対局結果を編集' : '対局結果を登録'}</h2>
+    <h2 class="panel-title" style="margin-top:0;">${draft.editingDate ? `対局結果を編集（${modeLabel}）` : `対局結果を登録（${modeLabel}）`}</h2>
+    <div class="sec-note" style="margin-bottom:18px;">現在ヘッダーで選択中のモード（${modeLabel}）として登録されます。他のモードで登録したい場合は、ヘッダーの切り替えボタンで先にモードを変えてください。</div>
 
     <div class="update-card">
       <div class="field-group">
@@ -1889,7 +1991,7 @@ function renderPlayerPage(name) {
           <label class="field-label" style="margin:0;">回戦ごとの得失点</label>
           <button type="button" class="btn ghost small" id="u-add-round-btn">＋ 回戦を追加</button>
         </div>
-        <div class="sec-note" style="margin-bottom:10px;">5人以上参加している場合、その回戦を空欄のままにすると「抜け番」として扱われます</div>
+        <div class="sec-note" style="margin-bottom:10px;">${modeLabel}（1回戦${rankCount}人打ち）です。参加者が${rankCount}人を超える場合、回戦ごとに順番に抜け番を作ってください（その回戦を空欄のままでOK）。</div>
         <div id="u-rounds">${roundsHTML}</div>
       </div>
 
@@ -1908,7 +2010,7 @@ function renderPlayerPage(name) {
           : '※ スプレッドシート連携がまだ設定されていません。このままだと更新内容はページを閉じると失われます。'}</div>
     </div>
 
-    <h2 class="panel-title">登録済みの対局</h2>
+    <h2 class="panel-title">登録済みの対局（${modeLabel}）</h2>
     <div class="table-card">${existingHTML}</div>
   `;
 
@@ -1981,11 +2083,12 @@ function renderPlayerPage(name) {
       document.querySelectorAll('.delete-session-btn').forEach(btn => {
         btn.addEventListener('click', async () => {
           const date = btn.dataset.date;
+          const gameType = btn.dataset.gameType;
           if (!confirm(`${dateLabel(date)}の対局結果を削除します。よろしいですか？`)) return;
           btn.disabled = true;
           btn.textContent = '削除中…';
-          appData.sessions = appData.sessions.filter(s => s.date !== date);
-          await deleteSessionFromSheet(date);
+          appData.sessions = appData.sessions.filter(s => !(s.date === date && (s.gameType || 'yonma') === gameType));
+          await deleteSessionFromSheet(date, gameType);
           refreshAll();
           renderUpdatePage();
         });
@@ -1994,7 +2097,8 @@ function renderPlayerPage(name) {
       document.querySelectorAll('.edit-session-btn').forEach(btn => {
         btn.addEventListener('click', () => {
           const date = btn.dataset.date;
-          const raw = appData.sessions.find(s => s.date === date);
+          const gameType = btn.dataset.gameType;
+          const raw = appData.sessions.find(s => s.date === date && (s.gameType || 'yonma') === gameType);
           if (!raw) return;
           const names = Object.keys(raw.results);
           const nRounds = Math.max(...names.map(n => raw.results[n].rounds.length));
@@ -2004,7 +2108,7 @@ function renderPlayerPage(name) {
             names.forEach(n => { r[n] = raw.results[n].rounds[i]; });
             rounds.push(r);
           }
-          draft = { date, participants: names, rounds, editingDate: date };
+          draft = { date, gameType, participants: names, rounds, editingDate: date, editingGameType: gameType };
           renderUpdatePage();
           window.scrollTo(0, 0);
         });
@@ -2039,6 +2143,9 @@ function renderPlayerPage(name) {
       statusEl.className = 'status-msg';
       statusEl.textContent = '';
 
+      const rankCount = draft.gameType === 'sanma' ? 3 : 4;
+      const modeLabel = draft.gameType === 'sanma' ? '三麻' : '四麻';
+
       if (!draft.date) { statusEl.className = 'status-msg err'; statusEl.textContent = '対局日を入力してください。'; return; }
       if (draft.participants.length < 2) { statusEl.className = 'status-msg err'; statusEl.textContent = '参加者を2人以上選んでください。'; return; }
       if (draft.rounds.length < 1) { statusEl.className = 'status-msg err'; statusEl.textContent = '回戦を1つ以上追加してください。'; return; }
@@ -2052,6 +2159,11 @@ function renderPlayerPage(name) {
           statusEl.textContent = `${ri + 1}回戦の得失点が1件も入力されていません。`;
           return;
         }
+        if (filledCount > rankCount) {
+          statusEl.className = 'status-msg err';
+          statusEl.textContent = `${modeLabel}は1回戦${rankCount}人打ちです。${ri + 1}回戦に${filledCount}人分入力されています。誰かを抜け番（空欄）にしてください。`;
+          return;
+        }
       }
       for (const name of draft.participants) {
         const playedAny = draft.rounds.some(r => isFilled(r[name]));
@@ -2062,9 +2174,10 @@ function renderPlayerPage(name) {
         }
       }
 
-      const existingIdx = appData.sessions.findIndex(s => s.date === draft.date);
-      if (existingIdx > -1 && draft.date !== draft.editingDate) {
-        if (!confirm(`${dateLabel(draft.date)}にはすでに対局結果があります。上書きしますか？`)) return;
+      const existingIdx = appData.sessions.findIndex(s => s.date === draft.date && (s.gameType || 'yonma') === draft.gameType);
+      const isSameAsEditing = draft.editingDate === draft.date && draft.editingGameType === draft.gameType;
+      if (existingIdx > -1 && !isSameAsEditing) {
+        if (!confirm(`${dateLabel(draft.date)}にはすでに${modeLabel}の対局結果があります。上書きしますか？`)) return;
       }
 
       const saveBtn = document.getElementById('u-save-btn');
@@ -2076,17 +2189,17 @@ function renderPlayerPage(name) {
       draft.participants.forEach(name => {
         results[name] = { rounds: draft.rounds.map(r => isFilled(r[name]) ? Number(r[name]) : null) };
       });
-      const session = { date: draft.date, label: dateLabel(draft.date), results };
+      const session = { date: draft.date, gameType: draft.gameType, label: dateLabel(draft.date), results };
 
-      if (draft.editingDate && draft.editingDate !== draft.date) {
-        appData.sessions = appData.sessions.filter(s => s.date !== draft.editingDate);
-        await deleteSessionFromSheet(draft.editingDate);
+      if (draft.editingDate && !isSameAsEditing) {
+        appData.sessions = appData.sessions.filter(s => !(s.date === draft.editingDate && (s.gameType || 'yonma') === draft.editingGameType));
+        await deleteSessionFromSheet(draft.editingDate, draft.editingGameType);
       }
-      const idx = appData.sessions.findIndex(s => s.date === draft.date);
+      const idx = appData.sessions.findIndex(s => s.date === draft.date && (s.gameType || 'yonma') === draft.gameType);
       if (idx > -1) { appData.sessions[idx] = session; }
       else { appData.sessions.push(session); }
 
-      const saved = await saveSessionToSheet(draft.date, results);
+      const saved = await saveSessionToSheet(draft.date, draft.gameType, results);
       refreshAll();
 
       pendingStatus = saved
@@ -2099,7 +2212,7 @@ function renderPlayerPage(name) {
 
     /* ====== ルーティング ====== */
     /* ====== 対局結果登録のパスワードロック ====== */
-    const UPDATE_PASSWORD = "1124";
+    const UPDATE_PASSWORD = CURRENT_GROUP.password || "1124";
     let isUnlocked = false;
 
     function renderLockScreen() {
@@ -2164,12 +2277,13 @@ function renderPlayerPage(name) {
     /* ====== 再描画まとめ ====== */
     let stats = null;
     function refreshAll() {
-      stats = buildStats();
+      stats = buildStats(currentMode);
       renderRankStrip();
       renderTable();
       renderSessions();
+      const modeLabel = currentMode === 'sanma' ? '三麻' : '四麻';
       document.getElementById('footer-note').textContent =
-        `${appData.playerNames.join(' · ')}　—　最終更新 ${stats.sessions.length ? stats.sessions[stats.sessions.length - 1].label : '―'}`;
+        `${appData.playerNames.join(' · ')}　—　${modeLabel} 最終更新 ${stats.sessions.length ? stats.sessions[stats.sessions.length - 1].label : '―'}`;
     }
 
     let currentSort = { key: null, dir: 1 };
@@ -2185,8 +2299,51 @@ function renderPlayerPage(name) {
       });
     }
 
+    /* ====== ゲームモード（四麻／三麻）====== */
+    function loadSavedMode() {
+      try {
+        const saved = localStorage.getItem('mahjong-mode-' + GROUP_ID);
+        if (saved === 'sanma' || saved === 'yonma') return saved;
+      } catch (e) { /* localStorageが使えない環境では無視 */ }
+      return 'yonma';
+    }
+    let currentMode = loadSavedMode();
+
+    function applyModeButtons() {
+      document.querySelectorAll('#mode-toggle .mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === currentMode);
+      });
+      document.documentElement.setAttribute('data-mode', currentMode);
+    }
+
+    function setMode(mode) {
+      if (mode === currentMode) return;
+      currentMode = mode;
+      try { localStorage.setItem('mahjong-mode-' + GROUP_ID, mode); } catch (e) { /* 無視 */ }
+      applyModeButtons();
+      draft = null; // モードが変わったら入力中の下書きは破棄する
+      refreshAll();
+      route();
+    }
+
+    function bindModeToggle() {
+      applyModeButtons();
+      document.querySelectorAll('#mode-toggle .mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => setMode(btn.dataset.mode));
+      });
+    }
+
     /* ====== 起動 ====== */
+    (function applyGroupBranding() {
+      const eyebrowEl = document.getElementById('header-eyebrow');
+      const titleEl = document.getElementById('header-title');
+      if (eyebrowEl) eyebrowEl.textContent = CURRENT_GROUP.eyebrow;
+      if (titleEl) titleEl.childNodes[0].textContent = CURRENT_GROUP.title;
+      document.title = `${CURRENT_GROUP.title} | 麻雀リーグ成績`;
+    })();
+
     (async function init() {
+      bindModeToggle();
       await loadData();
       refreshAll();
       bindSortHandlers();
