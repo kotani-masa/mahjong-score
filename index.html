@@ -2281,9 +2281,8 @@ function renderPlayerPage(name) {
       renderRankStrip();
       renderTable();
       renderSessions();
-      const modeLabel = currentMode === 'sanma' ? '三麻' : '四麻';
       document.getElementById('footer-note').textContent =
-        `${appData.playerNames.join(' · ')}　—　${modeLabel} 最終更新 ${stats.sessions.length ? stats.sessions[stats.sessions.length - 1].label : '―'}`;
+        `最終更新 ${stats.sessions.length ? stats.sessions[stats.sessions.length - 1].label : '―'}`;
     }
 
     let currentSort = { key: null, dir: 1 };
